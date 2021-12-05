@@ -228,12 +228,3 @@ class DSA:
 		u2 = w * signature.r % key.params.q
 		v = (pow(key.params.g, u1, key.params.p) * pow(key.y, u2, key.params.p) % key.params.p) % key.params.q
 		return v == signature.r
-
-
-for i in range(10):
-	for lengths in DSA.APPROVED_LENGTHS:
-		N, L = lengths
-		params = DSA.generateProbablePrimes(N, L, L)
-		print(params.beautyRepr(1))
-		assert DSA.verifyProbablePrimesGenerationResult(params)
-		print("Parameters verified")

@@ -159,7 +159,7 @@ def primeFactors(n: int) -> list:
 
     Return: list of factors
     """
-    if is_prime(n, 10):
+    if isPrime(n, 10):
         return [n]
 
     import math
@@ -204,7 +204,7 @@ def eulersTotient(n: int, factors: list = None) -> int:
 
     Return: result of the Euler's function work
     """
-    if is_prime(n, 10):
+    if isPrime(n, 10):
         return n - 1
 
     if factors:
@@ -213,11 +213,11 @@ def eulersTotient(n: int, factors: list = None) -> int:
             mul *= f
 
         if mul != n: 
-            n_factors = set(prime_factors(n))
+            n_factors = set(primeFactors(n))
         else:
             n_factors = set(factors)
     else:
-        factors = prime_factors(n)
+        factors = primeFactors(n)
         n_factors = set(factors)
 
     count = {}
@@ -286,18 +286,18 @@ if __name__ == "__main__":
 		elif command == 3:
 			n = int(input("Enter the number to check >> "))
 			t = int(input("How much tests to perform >> "))
-			if is_prime(n, t):
+			if isPrime(n, t):
 				print(f"Number {n} is prime with probability of {1 - 1 / 4 ** t}")
 			else:
 				print(f"Number {n} is composite")
 
 		elif command == 4:
 			n = int(input("Enter required length >> "))
-			print(f"Your number is >> {get_prime(n)}")
+			print(f"Your number is >> {getPrime(n)}")
 
 		elif command == 5:
 			n = int(input("Enter the number to factorize >> "))
-			print(f"Factors of {n}: {' '. join(list(map(str, prime_factors(n))))}")
+			print(f"Factors of {n}: {' '. join(list(map(str, primeFactors(n))))}")
 
 		elif command == 6:
 			n = int(input("Enter the number >> "))
@@ -312,7 +312,7 @@ if __name__ == "__main__":
 				if mul != n:
 					factors = None
 					print(f"Multiplication of given factors not equals to {n}. Going to calculate factors by myself, it may take some time.")
-			print(f"Euler's totient for {n} is: {eulers_totient(n, factors)}")
+			print(f"Euler's totient for {n} is: {eulersTotient(n, factors)}")
 
 		elif command == 0:
 			break
