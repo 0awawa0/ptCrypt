@@ -158,6 +158,30 @@ def getPrime(n: int, checks: int = 10) -> int:
             return num
 
 
+def isPerfectSquare(p: int) -> bool:
+    """Checks if given number is a perfect square
+
+    Parameters:
+        p: int
+            number to check
+    
+    Returns:
+        result: bool
+            True if number is a perfect square
+            False if number is not a perfect square
+    """
+    
+    if p <= 1: return False
+
+    x = p // 2
+    seen = set([x])
+    while x * x != p:
+        x = (x + (p // x)) // 2
+        if x in seen: return False
+        seen.add(x)
+    return True
+
+
 def primeFactors(n: int) -> list:
     """Naive integer factorization function
 

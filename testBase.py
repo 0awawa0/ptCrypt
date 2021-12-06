@@ -34,4 +34,4 @@ def measurePrimalityTestTime():
 
 
 if __name__ == "__main__":
-    measurePrimalityTestTime()
+    
