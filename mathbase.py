@@ -109,52 +109,47 @@ def millerRabin(p: int, t: int) -> bool:
 
 def lucasTest(n: int, iterations: int = 10) -> bool:
 
-    if isPerfectSquare(n): return False
+    if n % 2 == 0 or isPerfectSquare(n): return False
 
-
-    d = 5
-    mul = 1
+    def sequence():
+        value = 5
+        while True:
+            yield value
+            if value > 0:
+                value += 2
+            else:
+                value -= 2
+            value = -value
     
-    while 1:
-        s = jacobiSymbol(mul * d, n)
-        if s == -1: break
+    for d in sequence():
+        s = jacobiSymbol(d, n)
         if s == 0: return False
-        if s == None: return False
+        if s == -1: break
 
-        d += 2
-        mul *= -1
-    
-    d = d * mul
-    K = [int(i) for i in bin(n + 1)[2:]]
-    K.reverse()
-    K = K + [1]
-    U = [1] * len(K)
-    V = [1] * len(K)
+    K = n + 1
+    r = K.bit_length() - 1
+
+    Ui = 1
+    Vi = 1
+
+    Ut = 0
+    Vt = 0
 
     invOfTwo = pow(2, -1, n)
-    i = len(K) - 2
-    while i >= 0:
-        Ut = (U[i + 1] * V[i + 1]) % n
+    for i in range(r - 1, -1, -1):
+        Ut = (Ui * Vi) % n
 
-        Upower = pow(U[i + 1], 2, n)
-        Vpower = pow(V[i + 1], 2, n)
-        Vt = invOfTwo * (Vpower + d * Upower)
-        Vt = Vt % n
-        
+        Vt = (Ui * Ui * d + Vi * Vi) % n
+        Vt = (Vt * invOfTwo) % n
 
-        if K[i]:
-            U[i] = (Ut + Vt) * invOfTwo
-            U[i] = U[i] % n
-
-            V[i] = (Vt + d * Ut) * invOfTwo
-            V[i] = V[i] % n
+        if (K >> i) & 1:
+            Ui = ((Ut + Vt) * invOfTwo) % n
+            Vi = ((Vt + Ut * d) * invOfTwo) % n
         else:
-            U[i] = Ut
-            V[i] = Vt
-        
-        i -= 1
-
-    return U[0] == 0
+            Ui = Ut
+            Vi = Vt
+    
+    return Ui == 0
 
 
 
@@ -233,24 +228,28 @@ def isPerfectSquare(p: int) -> bool:
     return True
 
 
-def jacobiSymbol(a: int, n: int) -> int:    
-    if n < a or n % 2 == 0: return None
+def jacobiSymbol(a, n):
 
-    t = 1
-    while a != 0:
-        while a % 2 == 0:
-            a = a // 2
-            r = n % 8
-            if r == 3 or r == 5:
-                t = -t
-        a, n = n, a
-        if a % 4 == n % 4 == 3:
-            t = -t
-        a %= n
-    if n == 1:
-        return t
-    else:
-        return 0
+        if n <= 0 or n % 2 == 0: return None
+
+        a = a % n
+        if a == 1 or n == 1: return 1
+        if a == 0: return 0
+
+        e = 0
+        a1 = a
+        while a1 % 2 == 0:
+            a1 >>= 1
+            e += 1
+
+        if (e & 1) == 0: s = 1
+        elif n % 8 in (1, 7): s = 1
+        else: s = -1
+
+        if n % 4 == 3 and a1 % 4 == 3: s = -s
+
+        n1 = n % a1
+        return s * jacobiSymbol(n1, a1)
 
 
 def primeFactors(n: int) -> list:

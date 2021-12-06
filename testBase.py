@@ -40,13 +40,14 @@ def testJacobi():
 
 
 def testLucas():
+    from Crypto.Math.Primality import lucas_test
 
     count = 0
     ms = []
     ls = []
     p = mathbase.getPrime(128)
     while count < 10:
-        a = random.getrandbits(128)
+        a = random.getrandbits(1024)
         start = datetime.now()
         m = mathbase.millerRabin(a, 10)
         end = datetime.now()
@@ -57,10 +58,12 @@ def testLucas():
         end = datetime.now()
         ls.append((end - start).microseconds)
 
+        l1 = lucas_test(a)
+
         if m:
             count += 1
             print(l)
-            print(a)
+            print(l1 == 1)
 
     avg = sum(ms) / len(ms)
     avg1 = sum(ls) / len(ls)
