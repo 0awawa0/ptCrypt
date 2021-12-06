@@ -33,5 +33,41 @@ def measurePrimalityTestTime():
     print(f"Count of primes: {count}")
 
 
+def testJacobi():
+    a = 5
+    n = 3439601197
+    print(mathbase.jacobiSymbol(a, n))
+
+
+def testLucas():
+
+    count = 0
+    ms = []
+    ls = []
+    p = mathbase.getPrime(128)
+    while count < 10:
+        a = random.getrandbits(128)
+        start = datetime.now()
+        m = mathbase.millerRabin(a, 10)
+        end = datetime.now()
+        ms.append((end - start).microseconds)
+
+        start = datetime.now()
+        l = mathbase.lucasTest(a)
+        end = datetime.now()
+        ls.append((end - start).microseconds)
+
+        if m:
+            count += 1
+            print(l)
+            print(a)
+
+    avg = sum(ms) / len(ms)
+    avg1 = sum(ls) / len(ls)
+    print(avg)
+    print(avg1)
+    print(count)
+
+
 if __name__ == "__main__":
-    
+    testLucas()

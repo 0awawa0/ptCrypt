@@ -107,6 +107,57 @@ def millerRabin(p: int, t: int) -> bool:
     return True
 
 
+def lucasTest(n: int, iterations: int = 10) -> bool:
+
+    if isPerfectSquare(n): return False
+
+
+    d = 5
+    mul = 1
+    
+    while 1:
+        s = jacobiSymbol(mul * d, n)
+        if s == -1: break
+        if s == 0: return False
+        if s == None: return False
+
+        d += 2
+        mul *= -1
+    
+    d = d * mul
+    K = [int(i) for i in bin(n + 1)[2:]]
+    K.reverse()
+    K = K + [1]
+    U = [1] * len(K)
+    V = [1] * len(K)
+
+    invOfTwo = pow(2, -1, n)
+    i = len(K) - 2
+    while i >= 0:
+        Ut = (U[i + 1] * V[i + 1]) % n
+
+        Upower = pow(U[i + 1], 2, n)
+        Vpower = pow(V[i + 1], 2, n)
+        Vt = invOfTwo * (Vpower + d * Upower)
+        Vt = Vt % n
+        
+
+        if K[i]:
+            U[i] = (Ut + Vt) * invOfTwo
+            U[i] = U[i] % n
+
+            V[i] = (Vt + d * Ut) * invOfTwo
+            V[i] = V[i] % n
+        else:
+            U[i] = Ut
+            V[i] = Vt
+        
+        i -= 1
+
+    return U[0] == 0
+
+
+
 def getPrime(n: int, checks: int = 10) -> int:
     """Function generates random prime number with bit length equals n
 
@@ -180,6 +231,26 @@ def isPerfectSquare(p: int) -> bool:
         if x in seen: return False
         seen.add(x)
     return True
+
+
+def jacobiSymbol(a: int, n: int) -> int:    
+    if n < a or n % 2 == 0: return None
+
+    t = 1
+    while a != 0:
+        while a % 2 == 0:
+            a = a // 2
+            r = n % 8
+            if r == 3 or r == 5:
+                t = -t
+        a, n = n, a
+        if a % 4 == n % 4 == 3:
+            t = -t
+        a %= n
+    if n == 1:
+        return t
+    else:
+        return 0
 
 
 def primeFactors(n: int) -> list:
