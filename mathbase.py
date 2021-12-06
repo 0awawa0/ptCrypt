@@ -5,11 +5,15 @@ from smallPrimes import SMALL_PRIMES
 def gcd(n: int, m: int) -> int:
     """Euklidean algorithm. Finds greatest common divisor of n and m
 
-    Args:
-            n -- first number
-            m -- second number
+    Parameters:
+        n: int
+            first number
+        m: int
+            second number
 
-    Return: greatest common divisor of n and m.
+    Returns: 
+        result: int
+            greatest common divisor of n and m.
     """
 
     if not n:
@@ -25,14 +29,20 @@ def gcd(n: int, m: int) -> int:
 def egcd(n: int, m: int) -> dict:
     """Extended Euklidean algorithm. Finds greatest common divisor of n and m
 
-     Args:
-         n -- first number
-         m -- second number
+    Parameters:
+        n: int
+            first number
+        m: int
+            second number
 
-     Return: dictionary with specified keys:
-         reminder -- greatest common divisor
-         a, b -- answers to equation an + bm = reminder
-     """
+    Returns: 
+        result: dict
+            dictionary with specified keys:
+            reminder: int
+                greatest common divisor
+            a, b: int
+                answers to equation an + bm = reminder
+    """
 
     a, a_ = 0, 1
     b, b_ = 1, 0
@@ -52,71 +62,64 @@ def egcd(n: int, m: int) -> dict:
     return {"reminder": d, "a": a, "b": b}
 
 
-def isPrime(p: int, t: int) -> bool:
+def millerRabin(p: int, t: int) -> bool:
     """Miller-Rabin primality test. Error probability is (1/4)^t
     More about Miller-Rabin test:
     https://en.wikipedia.org/wiki/Miller–Rabin_primality_test
 
-    Args:
-        p -- number to be tested
-        t -- count of tests
+    Parameters:
+        p: int
+            number to be tested
+        t: int
+            count of tests
 
-    Return: True if the number is prime, else - False
+    Returns: 
+        result: bool
+            True if the number is prime, else - False
     """
-    if p <= 0:
+    if p <= 1:
         return False
 
-    if p == 2 or p == 1:
-        return True
-
-    if p in SMALL_PRIMES:
-        return True
-
-    if True in [p % i == 0 for i in SMALL_PRIMES]:
-        return False
-
-    temp = p - 1
+    k = 1
     b = 0
-
-    while temp % 2 == 0:
-        temp = temp // 2
+    while (p - 1) % k == 0:
         b += 1
+        k = k << 1
 
-    m = (p - 1) // 2 ** b
+    k = k >> 1
+    b -= 1
+    m = (p - 1) // k
 
-    for i in range(t):
-
-        a = random.randint(2, p-1)
+    for _ in range(t):
+        a = random.getrandbits(p.bit_length())
         z = pow(a, m, p)
 
-        if z == 1 or z == p - 1:
-            continue
+        if z == 1 or z == p - 1: continue
 
-        for j in range(b - 1):
+        for _ in range(b - 1):
             z = pow(z, 2, p)
+            if z == 1: return False
+            if z == p - 1: break
 
-            if z == 1:
-                return False
-
-            elif z == p - 1:
-                break
-
-        if z == p - 1:
-            continue
-
-        else:
-            return False
+        if z == p - 1: continue
+        return False
 
     return True
 
 
-def getPrime(n: int) -> int:
+def getPrime(n: int, checks: int = 10) -> int:
     """Function generates random prime number with bit length equals n
 
-    Args:
-        n -- bit length of generated number
+    Parameters:
+        n: int
+            bit length of generated number
 
-    Return: prime number
+        checks: int
+            count of primality checks to perform
+
+    Returns: 
+        result: int
+            number probable with probability 0.25**(checks)
     """
     while True:
 
@@ -151,19 +154,22 @@ def getPrime(n: int) -> int:
         # If it's not, I run Miller-Rabin test 10 times for this number
         # If number passes the test I return it. And it's prime with the
         # probability of 0.9999990463256836
-        if isPrime(num, 10):
+        if millerRabin(num, checks):
             return num
 
 
 def primeFactors(n: int) -> list:
-    """Function finds all prime divisors of the given number
+    """Naive integer factorization function
 
-    Args:
-        n -- number to be factorized
+    Parameters:
+        n: int
+            number to be factorized
 
-    Return: list of factors
+    Returns: 
+        result: list
+            all factors of n
     """
-    if isPrime(n, 10):
+    if millerRabin(n, 10):
         return [n]
 
     import math
@@ -188,10 +194,17 @@ def pollardFactor(n, init=2, bound=2**16):
     More details:
     https://en.wikipedia.org/wiki/Pollard%27s_p_%E2%88%92_1_algorithm
 
-    Args:
-        n -- number to be factorized
-        init -- initial value
-        bound -- smoothness bound
+    Parameters:
+        n: int
+            number to be factorized
+        init: int
+            initial value
+        bound:
+            smoothness bound
+    
+    Returns:
+        result: int
+            prime divisor of n or None if algorithm fails
     """
     a = init
     for prime in SMALL_PRIMES:
@@ -214,12 +227,15 @@ def eulersTotient(n: int, factors: list = None) -> int:
     relatively prime to n. More about Euler's function:
     https://en.wikipedia.org/wiki/Euler%27s_totient_function
 
-    Args:
-        n -- number to be processed
+    Parameters:
+        n: int
+            number to be processed
 
-    Return: result of the Euler's function work
+    Returns: 
+        result: int
+            Euler's totient of given number
     """
-    if isPrime(n, 10):
+    if millerRabin(n, 10):
         return n - 1
 
     if factors:
@@ -247,7 +263,19 @@ def eulersTotient(n: int, factors: list = None) -> int:
 
 def iroot(a, b):
     """Function to calculate a-th integer root from b. Example: iroot(2, 4) == 2
+
+    Parameters:
+        a: int
+            Root power
+        
+        b: int
+            Number to calculate root from
+        
+    Returns:
+        result: int
+            Integer a-th root of b
     """
+
     if b < 2:
         return b
     a1 = a - 1
@@ -261,11 +289,34 @@ def iroot(a, b):
 
 def intToBytes(n: int, byteorder: str = "big") -> bytes:
     """Converts given integer number to bytes object
+
+    Parameters:
+        n: int
+            number to convert to bytes
+        
+        byteorder: str
+            order of bytes. Big endian by default
+    
+    Returns:
+        result: bytes
+            list of bytes of number n
     """
-    return n.to_bytes((n.bit_length() + 7) // 8, "big")
+
+    return n.to_bytes((n.bit_length() + 7) // 8, byteorder.lower())
 
 
 def bytesToInt(b: bytes, byteorder: str = "big") -> int:
     """Converts given bytes object to integer number
+
+    Parameters:
+        b: bytes
+            bytes to convert into number
+        
+        byteorder: str
+            order of bytes. Big endian by default
+    
+    Returns:
+        result: int
+            bytes converted to int
     """
     return int.from_bytes(b, byteorder)
