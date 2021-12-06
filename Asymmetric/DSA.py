@@ -4,7 +4,8 @@ import hashlib
 
 
 class DSA:
-
+    """The implementation of DSA algorithm, class is built according to FIPS 186-4 standard
+    """
     APPROVED_LENGTHS = [
         (160, 1024),
         (224, 2048),
@@ -13,66 +14,255 @@ class DSA:
     ]
 
     class Params:
+        """Class that encapsulates basic DSA parameters
+
+        Attributes:
+            primes: Primes
+                Prime numbers p and q
+            g: int
+                Gorup generator
+        """
 
         class Primes:
+            """Class that encapsulates primes p and q
+
+            Attributes:
+                p: int
+                    Bigger prime
+                q: int
+                    Smaller prime
+            """
+
             def __init__(self, p: int, q: int):
+                """Initializes class object with p and q
+
+                Parameters:
+                    p: int
+                        Bigger prime
+                    
+                    q: int
+                        Smaller prime
+                """
+
                 self.p = p
                 self.q = q
 
             def beautyRepr(self, level: int) -> str:
+                """Prints out the object in a beautified way
+
+                Parameters:
+                    level: int
+                        Indentation level
+                """
+
                 indent = "\t" * level
                 return f"Primes: \n{indent}p: {hex(self.p)}\n{indent}q: {hex(self.q)}"
 
         class ProbablePrimesGenerationResult:
+            """Encapsulates result of the probable primes generation
+            This result includes status of generation, generated primes and parameters 
+            counter and domainParameterSeed used to verify generated primes. 
+            See FIPS 186-4 for details
+
+            Attributes:
+                status: bool
+                    True if generation was successful
+                    False if generation failed
+                
+                primes: Primes
+                    primes p and q. If status is False, this field is None
+                
+                verifyParams: ProbablePrimesVerifyParams
+                    domainParameterSeed and counter parameters for primes verification
+            """
+
             class ProbablePrimesVerifyParams:
+                """Encapsulates parameters for primes verification
+                See FIPS 186-4 for details
+
+                Attributes:
+                    domainParameterSeed: int
+                    counter: int
+                """
+
                 def __init__(self, domainParameterSeed: int, counter: int):
+                    """Initializes object with domainParameterSeed and counter
+
+                    Parameters:
+                        domainParameterSeed: int
+                            domain_parameter_seed value for primes verification
+                        
+                        counter: int
+                            counter value for primes verification
+                    
+                    See FIPS 186-4 for details
+                    """
+
                     self.domainParameterSeed = domainParameterSeed
                     self.counter = counter
 
                 def beautyRepr(self, level: int) -> str:
+                    """Prints out the object in a beautified way
+
+                    Parameters:
+                        level: int
+                            Indentation level
+                    """
                     indent = "\t" * level
                     return f"ProbablePrimesVerifyParams:\n{indent}domainPrameterSeed: {hex(self.domainParameterSeed)}\n{indent}counter: {hex(self.counter)}"
 
             def __init__(self, status: bool, primes, verifyParams: ProbablePrimesVerifyParams):
+                """Initializes object with status, primes and verification parameters
+
+                Parameters:
+                    status: bool
+                        Generation status, indicates if generation was successful
+                    
+                    primes: Primes
+                        Generated prime numbers
+                    
+                    verifyParams: ProbablePrimesVerifyParams
+                        Parameters for primes verification
+                """
+
                 self.status = status
                 self.primes = primes
                 self.verifyParams = verifyParams
 
             def beautyRepr(self, level: int) -> str:
+                """Prints out the object in a beautified way
+
+                Parameters:
+                    level: int
+                        Indentation level
+                """
+
                 primesRepr = self.primes.beautyRepr(level + 1)
                 verifyParamsRepr = self.verifyParams.beautyRepr(level + 1)
                 indent = "\t" * level
                 return f"ProbablePrimesGenerationResult: \n{indent}status: {self.status}\n{indent}{primesRepr}\n{indent}{verifyParamsRepr}"
 
         def __init__(self, primes: Primes, g: int):
+            """Initializes parameters object with given primes and generator
+
+            Parameters:
+                primes: int
+                   Primes p and q
+                    
+                g: int
+                    Group generator
+            """
+
             self.primes = primes
             self.g = g
 
         def beautyRepr(self, level: int) -> str:
+            """Prints out the object in a beautified way
+
+            Parameters:
+                level: int
+                    Indentation level
+            """
             primesRepr = self.primes.beautyRepr(level + 1)
             indent = "\t" * level
             return f"DSA Params: \n{indent}{primesRepr}\n{indent}g: {self.g}"
 
     class PublicKey:
+        """Encapsulates DSA public key
+
+        Attributes:
+            params: Params
+                DSA parameters: p, q and g
+
+            y: int
+                Public exponent
+        """
 
         def __init__(self, params, y: int):
+            """Initializes object with given params and public exponent
+                
+            Parameters:
+                params: Params
+                    DSA parameters
+                  
+                y: int
+                    Public exponent
+            """
+
             self.params = params
             self.y = y
 
     class PrivateKey:
+        """Encapsulates DSA private key
+
+        Attributes:
+            params: Params
+                DSA parameters: p, q and g
+            
+            x: int
+                Private exponent
+        """
 
         def __init__(self, params, x: int):
+            """Initializes object with given params and private exponent
+
+            Parameters:
+                params: Params
+                    DSA parameters
+                
+                x: int
+                    Private exponent
+            """
             self.params = params
             self.x = x
 
     class Signature:
+        """Encapsulates DSA signature
+
+        Attributes:
+            params: Params
+                DSA parameters: p, q and g
+            
+            r, s: int
+                DSA signature pair
+        """
 
         def __init__(self, params, r: int, s: int):
+            """Initializes object with  given params and (r, s) pair
+
+            Parameters:
+                params: Params
+                    DSA parameters
+                
+                r: int
+                s: int
+            """
             self.params = params
             self.r = r
             self.s = s
 
     def generateProbablePrimes(N: int, L: int, seedLength: int, hashFunction=hashlib.sha256):
+        """Generates probable primes p and q by FIPS 186-4 algorithm
+
+        Parameters:
+            N: int
+                Bit length of q - smaller prime
+            
+            L: int
+                Bit length of p - bigger prime
+            
+            seedLength: int
+                Bit length of seed, must not be less than N
+            
+            hashFunction: callable
+                Hash function conforming to hashlib protocols. By default hashlib.sha256 is used
+                Hash function output length must not be less than N
+        
+        Returns:
+            result: ProbablePrimesGenerationResult
+                Result of primes generation. result.status == False means something is wrong with
+                passed parameters.
+        """
 
         if (N, L) not in DSA.APPROVED_LENGTHS:
             return DSA.Params.ProbablePrimesGenerationResult(False, None, None)
@@ -137,6 +327,25 @@ class DSA:
         return DSA.Params.ProbablePrimesGenerationResult(False, None, None)
 
     def verifyProbablePrimesGenerationResult(result, hashFunction=hashlib.sha256) -> bool:
+        """Verifies if primes were generated by FIPS 186-4 algorithm
+        See FIPS 186-4 for algorithm details
+
+
+        Parameters:
+            result: ProbablePrimesGenerationResult
+                Value to be verified
+            
+            hashFunction: callable
+                Hash function that conforms to hashlib protocols. 
+                This function must be equal to the one used for primes generation
+                By default hashlib.sha256 is used
+            
+        Returns:
+            result: bool
+                True if verification succeeds
+                False if verification fails
+        """
+
         p = result.primes.p
         q = result.primes.q
         domainParameterSeed = result.verifyParams.domainParameterSeed
@@ -145,16 +354,13 @@ class DSA:
         N = q.bit_length()
         L = p.bit_length()
         if (N, L) not in DSA.APPROVED_LENGTHS:
-            print(1)
             return False
 
         if counter > (4 * L - 1):
-            print(2)
             return False
 
         seedLength = domainParameterSeed.bit_length()
         if seedLength < N:
-            print(3)
             return False
 
         twoPowNMin1 = pow(2, N - 1)
@@ -163,7 +369,6 @@ class DSA:
             hashPayload).digest()) % twoPowNMin1
         computedQ = pow(2, N - 1) + U + 1 - (U % 2)
         if computedQ != q or (not mathbase.isPrime(computedQ, 10)):
-            print(4)
             return False
 
         outlen = hashFunction().digest_size * 8
@@ -205,34 +410,10 @@ class DSA:
                 if i == counter and computed_p == p:
                     return True
                 else:
-                    print(5)
                     return False
 
             offset = offset + n + 1
 
-        print(6)
         return False
-
-    def generateKeys(params: Params):
-        x = random.randint(1, params.q - 1)
-        y = pow(params.g, x, params.p)
-        publicKey = DSA.PublicKey(params, y)
-        privateKey = DSA.PrivateKey(params, x)
-        return (publicKey, privateKey)
-
-    def sign(m: int, key: PrivateKey):
-        r = 0
-        s = 0
-        while r == 0 or s == 0:
-            k = random.randint(1, key.params.q - 1)
-            r = pow(key.params.g, k, key.params.p) % key.params.q
-            s = pow(k, -1, key.params.q) * (m + key.x * r) % key.params.q
-        return DSA.Signature(params, r, s)
-
-    def verify(m: int, signature: Signature, key: PublicKey):
-        w = pow(signature.s, -1, key.params.q)
-        u1 = w * m % key.params.q
-        u2 = w * signature.r % key.params.q
-        v = (pow(key.params.g, u1, key.params.p) * pow(key.y,
-             u2, key.params.p) % key.params.p) % key.params.q
-        return v == signature.r
+    
+    
