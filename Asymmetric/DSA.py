@@ -177,6 +177,32 @@ class ProbablePrimesGenerationResult:
         indent = "\t" * level
         return f"ProbablePrimesGenerationResult: \n{indent}status: {self.status}\n{indent}{primesRepr}\n{indent}{verifyParamsRepr}"
 
+
+class ProvablePrimesGenerationResult:
+    """
+    """
+    
+    class VerifyParams:
+
+        def __init__(self, pseed: int, qseed: int, pgenCounter:int, qgenCounter: int):
+            self.pseed = pseed
+            self.qseed = qseed
+            self.pgenCounter = pgenCounter
+            self.qgenCounter = qgenCounter
+        
+        def beautyRepr(self, level: int) -> str:
+            pass
+    
+    def __init__(self, status: bool, primes: Primes, verifyParams: VerifyParams):
+
+        self.status = status
+        self.primes = primes
+        self.verifyParams = verifyParams
+    
+    def beautyRepr(self, level: int) -> str:
+        pass
+
+
 class PublicKey:
     """Encapsulates DSA public key
 
@@ -519,3 +545,22 @@ def verifyProbablePrimesGenerationResult(result, hashFunction=hashlib.sha256) ->
 
     return False
 
+
+def getFirstSeed(N: int, seedlen: int):
+    firstSeed = 0
+    
+    nIsCorrect = False
+    for lengths in APPROVED_LENGTHS:
+        nIsCorrect = nIsCorrect or (N in lengths)
+    
+    if not nIsCorrect: return None
+    if seedlen < N: return None
+
+    twoPowNMin1 = pow(2, N - 1)
+    while firstSeed < twoPowNMin1: random.getrandbits(seedlen)
+    return firstSeed
+
+def generateProvablePrimes(L: int, N: int, firstSeed: int) -> ProvablePrimesGenerationResult:
+
+    if (L, N) not in APPROVED_LENGTHS: return ProvablePrimesGenerationResult(False, None, None)
+    

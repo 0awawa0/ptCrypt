@@ -1,4 +1,6 @@
+import hashlib
 import random
+from Asymmetric.DSA import Primes
 from smallPrimes import SMALL_PRIMES
 
 
@@ -456,3 +458,46 @@ def bytesToInt(b: bytes, byteorder: str = "big") -> int:
             bytes converted to int
     """
     return int.from_bytes(b, byteorder)
+
+
+def shaweTaylorRandomPrime(length: int, inputSeed: int, hashFunction: callable=hashlib.sha256) -> dict:
+    """Shawe-Taylor random prime generation routine
+
+    Algorithm specified by FIPS 186-4, Appendix C.6
+
+    Parameters:
+        length: int
+            the length of the prime to be generated
+        
+        inputSeed: int
+            the seed to be used for the generation of the requested prime
+
+        hashFunction: callable
+            hash function used during generation. The function must conform to 
+            hashlib protocols. By default hashlib.sha256 is used
+
+    Returns:
+        dictionary with keys:
+            status: bool
+                True if generation succeeded
+                False if generation failed
+            
+            prime: int
+                generated prime number
+            
+            primeSeed: int
+                a seed determined during generation
+            
+            primeGenCounter: int
+                a counter determined during the generation of the prime
+    """
+
+    if length < 2: return { "status": False, "prime": None, "primeSeed": None, "primeGenCounter": None}
+
+    if length < 33:
+        primeSeed = inputSeed
+        primeGenCounter = 0
+
+        hashPayload = intToBytes(primeSeed)
+        hashPayload1 = intToBytes(primeSeed + 1)
+        c = hashFunction
