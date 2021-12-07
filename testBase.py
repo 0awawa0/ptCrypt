@@ -40,7 +40,6 @@ def testJacobi():
 
 
 def testLucas():
-    from Crypto.Math.Primality import lucas_test
 
     count = 0
     ms = []
@@ -58,12 +57,9 @@ def testLucas():
         end = datetime.now()
         ls.append((end - start).microseconds)
 
-        l1 = lucas_test(a)
-
         if m:
             count += 1
             print(l)
-            print(l1 == 1)
 
     avg = sum(ms) / len(ms)
     avg1 = sum(ls) / len(ls)

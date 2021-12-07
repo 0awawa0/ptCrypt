@@ -283,15 +283,29 @@ def generateProbablePrimes(N: int, L: int, seedLength: int, hashFunction=hashlib
     if seedLength < N:
         ProbablePrimesGenerationResult(False, None, None)
 
+    if (N, L) == APPROVED_LENGTHS[0]:
+        pTests = 3
+        qTests = 19
+    elif (N, L) == APPROVED_LENGTHS[1]:
+        pTests = 3
+        qTests = 24
+    elif (N, L) == APPROVED_LENGTHS[2]:
+        pTests = 3
+        qTests = 27
+    else:
+        pTests = 2
+        qTests = 27
+
     # Length of hash funciton output in bits
     outlen = hashFunction().digest_size * 8
     if outlen < N:
         return ProbablePrimesGenerationResult(False, None, None)
 
-    if L % outlen == 0:
-        n = L // outlen - 1
-    else:
-        n = L // outlen
+    n = L // outlen + ((L & 1) - 1)
+    # if L % outlen == 0:
+    #     n = L // outlen - 1
+    # else:
+    #     n = L // outlen
 
     b = L - 1 - (n * outlen)
 
@@ -306,9 +320,9 @@ def generateProbablePrimes(N: int, L: int, seedLength: int, hashFunction=hashlib
         while 1:
             domainParameterSeed = random.getrandbits(seedLength)
             U = mathbase.bytesToInt(hashFunction(mathbase.intToBytes(domainParameterSeed)).digest()) % twoPowNMin1
-            q = twoPowNMin1 + U + 1 - (U % 2)
-            if mathbase.millerRabin(q, 10):
-                break
+            q = twoPowNMin1 + U + (1 - U % 2)
+            if mathbase.millerRabin(q, qTests):
+                if mathbase.lucasTest(q): break
 
         twoTimesQ = 2 * q
 
@@ -332,11 +346,12 @@ def generateProbablePrimes(N: int, L: int, seedLength: int, hashFunction=hashlib
             p = X - (c - 1)
 
             if p >= twoPowLMin1:
-                if mathbase.millerRabin(p, 10):
-                    primes = Primes(p, q)
-                    verifyParams = ProbablePrimesGenerationResult.VerifyParams(domainParameterSeed, counter)
+                if mathbase.millerRabin(p, pTests):
+                    if mathbase.lucasTest(p):
+                        primes = Primes(p, q)
+                        verifyParams = ProbablePrimesGenerationResult.VerifyParams(domainParameterSeed, counter)
 
-                    return ProbablePrimesGenerationResult(True, primes, verifyParams)
+                        return ProbablePrimesGenerationResult(True, primes, verifyParams)
 
             offset = offset + n + 1
 
@@ -373,6 +388,19 @@ def verifyProbablePrimesGenerationResult(result, hashFunction=hashlib.sha256) ->
     if (N, L) not in APPROVED_LENGTHS:
         return False
 
+    if (N, L) == APPROVED_LENGTHS[0]:
+        pTests = 3
+        qTests = 19
+    elif (N, L) == APPROVED_LENGTHS[1]:
+        pTests = 3
+        qTests = 24
+    elif (N, L) == APPROVED_LENGTHS[2]:
+        pTests = 3
+        qTests = 27
+    else:
+        pTests = 2
+        qTests = 27
+
     if counter > (4 * L - 1):
         return False
 
@@ -384,14 +412,13 @@ def verifyProbablePrimesGenerationResult(result, hashFunction=hashlib.sha256) ->
     hashPayload = mathbase.intToBytes(domainParameterSeed)
     U = mathbase.bytesToInt(hashFunction(hashPayload).digest()) % twoPowNMin1
     computedQ = pow(2, N - 1) + U + 1 - (U % 2)
-    if computedQ != q or (not mathbase.millerRabin(computedQ, 10)):
-        return False
+    if computedQ != q: return False
+    if not mathbase.millerRabin(computedQ, qTests): return False
+    if not mathbase.lucasTest(computedQ): return False
 
     outlen = hashFunction().digest_size * 8
-    if L % outlen == 0:
-        n = L // outlen - 1
-    else:
-        n = L // outlen
+    if L % outlen == 0: n = L // outlen - 1
+    else: n = L // outlen
 
     b = L - 1 - (n * outlen)
     twoPowSeedLength = pow(2, seedLength)
@@ -419,11 +446,12 @@ def verifyProbablePrimesGenerationResult(result, hashFunction=hashlib.sha256) ->
             offset = offset + n + 1
             continue
 
-        if mathbase.millerRabin(computed_p, 10):
-            if i == counter and computed_p == p:
-                return True
-            else:
-                return False
+        if mathbase.millerRabin(computed_p, pTests):
+            if mathbase.lucasTest(computed_p):
+                if i == counter and computed_p == p:
+                    return True
+                else:
+                    return False
 
         offset = offset + n + 1
 

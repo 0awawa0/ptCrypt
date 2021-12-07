@@ -107,7 +107,18 @@ def millerRabin(p: int, t: int) -> bool:
     return True
 
 
-def lucasTest(n: int, iterations: int = 10) -> bool:
+def lucasTest(n: int) -> bool:
+    """Lucas pseudoprime primality test. Error probability 4/15
+
+    Parameters:
+        n: int
+            number to be tested
+    
+    Returns:
+        result: bool
+            True if number is probably prime
+            False if number is definitely composite
+    """
 
     if n % 2 == 0 or isPerfectSquare(n): return False
 
@@ -229,27 +240,43 @@ def isPerfectSquare(p: int) -> bool:
 
 
 def jacobiSymbol(a, n):
+    """Recursive Jacobi symbol calculation
+    Details:
+    https://en.wikipedia.org/wiki/Jacobi_symbol
 
-        if n <= 0 or n % 2 == 0: return None
+    Parameters:
+        a: int
+            numerator
+        
+        n: int
+            denominator
 
-        a = a % n
-        if a == 1 or n == 1: return 1
-        if a == 0: return 0
+    Returns:
+        result: int
+            returns Jacobi symbol (-1; 0; 1) or None, if 
+            Jacobi symbol is not defined (for even and negative numbers)
+    """
 
-        e = 0
-        a1 = a
-        while a1 % 2 == 0:
-            a1 >>= 1
-            e += 1
+    if n <= 0 or n % 2 == 0: return None
 
-        if (e & 1) == 0: s = 1
-        elif n % 8 in (1, 7): s = 1
-        else: s = -1
+    a = a % n
+    if a == 1 or n == 1: return 1
+    if a == 0: return 0
 
-        if n % 4 == 3 and a1 % 4 == 3: s = -s
+    e = 0
+    a1 = a
+    while a1 % 2 == 0:
+        a1 >>= 1
+        e += 1
 
-        n1 = n % a1
-        return s * jacobiSymbol(n1, a1)
+    if (e & 1) == 0: s = 1
+    elif n % 8 in (1, 7): s = 1
+    else: s = -1
+
+    if n % 4 == 3 and a1 % 4 == 3: s = -s
+
+    n1 = n % a1
+    return s * jacobiSymbol(n1, a1)
 
 
 def primeFactors(n: int) -> list:
