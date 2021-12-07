@@ -45,8 +45,8 @@ def testLucas():
     ms = []
     ls = []
     p = mathbase.getPrime(128)
-    while count < 10:
-        a = random.getrandbits(1024)
+    while count < 100:
+        a = random.getrandbits(128)
         start = datetime.now()
         m = mathbase.millerRabin(a, 10)
         end = datetime.now()
@@ -59,7 +59,8 @@ def testLucas():
 
         if m:
             count += 1
-            print(l)
+            # print(m)
+            # print(l)
 
     avg = sum(ms) / len(ms)
     avg1 = sum(ls) / len(ls)

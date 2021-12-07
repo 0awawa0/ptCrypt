@@ -59,13 +59,15 @@ def egcd(n: int, m: int) -> dict:
         q = c // d
         r = c % d
 
-    return {"reminder": d, "a": a, "b": b}
+    return (d, a, b)
 
 
 def millerRabin(p: int, t: int) -> bool:
     """Miller-Rabin primality test. Error probability is (1/4)^t
     More about Miller-Rabin test:
     https://en.wikipedia.org/wiki/Miller–Rabin_primality_test
+
+    Algorithm also specified in FIPS 186-4, Appendix C.3.1
 
     Parameters:
         p: int
@@ -77,38 +79,53 @@ def millerRabin(p: int, t: int) -> bool:
         result: bool
             True if the number is prime, else - False
     """
-    if p <= 1:
-        return False
+    if p <= 1: return False
 
+    # Step 1. Find largest a such that (p - 1) % 2^a == 0
     k = 1
     b = 0
     while (p - 1) % k == 0:
         b += 1
         k = k << 1
-
     k = k >> 1
     b -= 1
+
+    # Step 2. m = (p - 1) / 2^a
     m = (p - 1) // k
 
-    for _ in range(t):
-        a = random.getrandbits(p.bit_length())
-        z = pow(a, m, p)
+    # Step 3. wlen = len(w)
+    plen = p.bit_length()
 
+    # Step 4
+    for _ in range(t):
+
+        # Steps 4.1 and 4.2
+        a = random.getrandbits(plen)
+        if a <= 1 or a >= p - 1: continue
+
+        # Step 4.3 and 4.4
+        z = pow(a, m, p)
         if z == 1 or z == p - 1: continue
 
+        # Step 4.5
         for _ in range(b - 1):
+            # Steps 4.5.1, 4.5.2 and 4.5.3
             z = pow(z, 2, p)
             if z == 1: return False
             if z == p - 1: break
 
         if z == p - 1: continue
+
+        # Step 4.6
         return False
 
+    # Step 5
     return True
 
 
 def lucasTest(n: int) -> bool:
     """Lucas pseudoprime primality test. Error probability 4/15
+    Algorithm specified in FIPS 186-4, Appendix C.3.3
 
     Parameters:
         n: int
@@ -120,8 +137,10 @@ def lucasTest(n: int) -> bool:
             False if number is definitely composite
     """
 
+    # Step 1
     if n % 2 == 0 or isPerfectSquare(n): return False
 
+    # Step 2
     def sequence():
         value = 5
         while True:
@@ -137,9 +156,12 @@ def lucasTest(n: int) -> bool:
         if s == 0: return False
         if s == -1: break
 
+    # Step 3
     K = n + 1
+
     r = K.bit_length() - 1
 
+    # Step 5
     Ui = 1
     Vi = 1
 
@@ -147,19 +169,27 @@ def lucasTest(n: int) -> bool:
     Vt = 0
 
     invOfTwo = pow(2, -1, n)
+
+    # Step 6
     for i in range(r - 1, -1, -1):
+        # Step 6.1
         Ut = (Ui * Vi) % n
 
+        # Step 6.2
         Vt = (Ui * Ui * d + Vi * Vi) % n
         Vt = (Vt * invOfTwo) % n
 
+        # Step 6.3
         if (K >> i) & 1:
+            # Steps 6.3.1 and 6.3.2
             Ui = ((Ut + Vt) * invOfTwo) % n
             Vi = ((Vt + Ut * d) * invOfTwo) % n
         else:
+            # Steps 6.3.3 and 6.3.4
             Ui = Ut
             Vi = Vt
     
+    # Step 7
     return Ui == 0
 
 
@@ -179,40 +209,18 @@ def getPrime(n: int, checks: int = 10) -> int:
             number probable with probability 0.25**(checks)
     """
     while True:
-
-        # Here I use random.getrandbits to generate n random bits
-        # Although higher bits might be 0, so actually this number may have
-        # bit length less then n.
-        # Moreover, lowest bit might be 0, so this number is not prime
-        # To fix this I switch lowest bit to 1, and after that, while
-        # the bit length of number less than n I complete it with 1 and 0.
-        # For example, n = 4, but generated 0010, so it's 2. And actual bit
-        # length is 2 (10). So I do this:
-        # 1) Switch lowest bit to 1 and I get number 3 -> 11
-        # 2) Complete number to 4 bits, so that highest bit is 1: 11 -> 1011
-        if n <= 1:
-            return
+        if n <= 1: return
 
         num = random.getrandbits(n) | (2 ** (n - 1) + 1)
 
-        # Now I has actual n bits number, but I cant say that it's prime
-        # So I check it
-        # First, I check if the number is divisible by any of prime numbers
-        # from 2 to 200
         def check_small_primes(n):
             for p in SMALL_PRIMES:
-                if n % p == 0 and n != p:
-                    return False
+                if n == p: return True
+                if n % p == 0: return False
             return True
 
-        if not check_small_primes(num):
-            continue
-
-        # If it's not, I run Miller-Rabin test 10 times for this number
-        # If number passes the test I return it. And it's prime with the
-        # probability of 0.9999990463256836
-        if millerRabin(num, checks):
-            return num
+        if not check_small_primes(num): continue
+        if millerRabin(num, checks): return num
 
 
 def isPerfectSquare(p: int) -> bool:
@@ -244,6 +252,8 @@ def jacobiSymbol(a, n):
     Details:
     https://en.wikipedia.org/wiki/Jacobi_symbol
 
+    Algorithm specified in FIPS 186-4, Appendix C.5
+
     Parameters:
         a: int
             numerator
@@ -259,23 +269,30 @@ def jacobiSymbol(a, n):
 
     if n <= 0 or n % 2 == 0: return None
 
+    # Steps 1, 2 and 3
     a = a % n
     if a == 1 or n == 1: return 1
     if a == 0: return 0
 
+    # Step 4
     e = 0
     a1 = a
     while a1 % 2 == 0:
         a1 >>= 1
         e += 1
 
+    # Step 5
     if (e & 1) == 0: s = 1
     elif n % 8 in (1, 7): s = 1
     else: s = -1
 
+    # Step 6
     if n % 4 == 3 and a1 % 4 == 3: s = -s
 
+    # Step 7
     n1 = n % a1
+
+    # Step 8
     return s * jacobiSymbol(n1, a1)
 
 
@@ -336,10 +353,8 @@ def pollardFactor(n, init=2, bound=2**16):
             power *= prime
 
         d = gcd(a - 1, n)
-        if d > 1 and d < n:
-            return d
-        if d == n:
-            return None
+        if d > 1 and d < n: return d
+        if d == n: return None
     return None
 
 
