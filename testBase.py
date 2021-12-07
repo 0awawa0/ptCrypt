@@ -1,6 +1,8 @@
-import mathbase
+from Math import base, primality
 from datetime import datetime
 import random
+
+from Math.primality import millerRabin, primeFactors, shaweTaylorRandomPrime
 
 
 def measurePrimalityTestTime():
@@ -11,12 +13,12 @@ def measurePrimalityTestTime():
         prime = random.getrandbits(2048)
 
         start = datetime.now()
-        a = mathbase.isPrime(prime, 10)
+        a = base.isPrime(prime, 10)
         end = datetime.now()
         t.append((end - start).microseconds)
 
         start = datetime.now()
-        b = mathbase.isPrimeOld(prime, 10)
+        b = base.isPrimeOld(prime, 10)
         end = datetime.now()
         t1.append((end - start).microseconds)
 
@@ -36,7 +38,7 @@ def measurePrimalityTestTime():
 def testJacobi():
     a = 5
     n = 3439601197
-    print(mathbase.jacobiSymbol(a, n))
+    print(base.jacobiSymbol(a, n))
 
 
 def testLucas():
@@ -44,16 +46,16 @@ def testLucas():
     count = 0
     ms = []
     ls = []
-    p = mathbase.getPrime(128)
+    p = base.getPrime(128)
     while count < 100:
         a = random.getrandbits(128)
         start = datetime.now()
-        m = mathbase.millerRabin(a, 10)
+        m = base.millerRabin(a, 10)
         end = datetime.now()
         ms.append((end - start).microseconds)
 
         start = datetime.now()
-        l = mathbase.lucasTest(a)
+        l = base.lucasTest(a)
         end = datetime.now()
         ls.append((end - start).microseconds)
 
@@ -69,5 +71,31 @@ def testLucas():
     print(count)
 
 
+def testShaweTaylor():
+
+    length = 512
+
+    t = []
+    t1 = []
+    for i in range(10):
+        start = datetime.now()
+        q = primality.getPrime(length)
+        end = datetime.now()
+        t.append((end - start).microseconds)
+
+        start = datetime.now()
+        p = shaweTaylorRandomPrime(length, random.getrandbits(length - 1))
+        while not p["status"]:
+            p = shaweTaylorRandomPrime(length, random.getrandbits(length - 1))
+        end = datetime.now()
+        t1.append((end - start).microseconds)
+
+        assert millerRabin(p["prime"], 64)
+    
+    avg = sum(t) / len(t)
+    avg1 = sum(t1) / len(t1)
+    print(f"Avg: {avg} microseconds")
+    print(f"Avg1: {avg1} microseconds")
+
 if __name__ == "__main__":
-    testLucas()
+    testShaweTaylor()

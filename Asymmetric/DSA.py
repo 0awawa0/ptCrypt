@@ -1,4 +1,4 @@
-import mathbase
+from Math import base
 import random
 import hashlib
 from datetime import date, datetime
@@ -351,14 +351,14 @@ def generateProbablePrimes(N: int, L: int, seedLength: int, hashFunction=hashlib
             domainParameterSeed = random.getrandbits(seedLength)
 
             #   U = Hash(domain_parameter_seed) mod 2^(N - 1)
-            U = mathbase.bytesToInt(hashFunction(mathbase.intToBytes(domainParameterSeed)).digest()) % twoPowNMin1
+            U = base.bytesToInt(hashFunction(base.intToBytes(domainParameterSeed)).digest()) % twoPowNMin1
 
             #   q = 2^(N - 1) + U + 1 - (U  mod 2)
             q = twoPowNMin1 + U + 1 - (U % 2)
 
             # Step 8
-            if mathbase.millerRabin(q, qTests):
-                if mathbase.lucasTest(q): break
+            if base.millerRabin(q, qTests):
+                if base.lucasTest(q): break
 
         # Precalcualted value, to not calculate it in the loop
         twoTimesQ = 2 * q
@@ -373,16 +373,16 @@ def generateProbablePrimes(N: int, L: int, seedLength: int, hashFunction=hashlib
             W = 0
             for j in range(0, n):
                 #   Vj = Hash((domain_parameter_seed + offset + j) mod 2^seedlen)
-                hashPayload = mathbase.intToBytes((domainParameterSeed + offset + j) % twoPowSeedLength)
-                v = mathbase.bytesToInt(hashFunction(hashPayload).digest())
+                hashPayload = base.intToBytes((domainParameterSeed + offset + j) % twoPowSeedLength)
+                v = base.bytesToInt(hashFunction(hashPayload).digest())
 
                 # W = sum(Vj * 2^(j * outlen))
                 W += v * pow(twoPowOutLength, j)
 
             # Last term of W calculation
             #   Vj = Hash((domain_parameter_seed + offset + j) % 2^seedlen)
-            hashPayload = mathbase.intToBytes((domainParameterSeed + offset + n) % twoPowSeedLength)
-            v = int(mathbase.bytesToInt(hashFunction(hashPayload).digest()) % twoPowB)
+            hashPayload = base.intToBytes((domainParameterSeed + offset + n) % twoPowSeedLength)
+            v = int(base.bytesToInt(hashFunction(hashPayload).digest()) % twoPowB)
 
             #   W += (Vn mod 2^b) * 2^(n * outlen)
             W += v * pow(twoPowOutLength, n)
@@ -396,8 +396,8 @@ def generateProbablePrimes(N: int, L: int, seedLength: int, hashFunction=hashlib
             if p >= twoPowLMin1:
 
                 # Step 11.7
-                if mathbase.millerRabin(p, pTests):
-                    if mathbase.lucasTest(p):
+                if base.millerRabin(p, pTests):
+                    if base.lucasTest(p):
 
                         # Step 11.8
                         primes = Primes(p, q)
@@ -470,8 +470,8 @@ def verifyProbablePrimesGenerationResult(result, hashFunction=hashlib.sha256) ->
 
     # Step 7
     #   U = Hash(domain_parameter_seed) mod 2^(N - 1)
-    hashPayload = mathbase.intToBytes(domainParameterSeed)
-    U = mathbase.bytesToInt(hashFunction(hashPayload).digest()) % twoPowNMin1
+    hashPayload = base.intToBytes(domainParameterSeed)
+    U = base.bytesToInt(hashFunction(hashPayload).digest()) % twoPowNMin1
 
     # Step 8
     #   computed_q = 2^(n - 1) + U + 1 - (U mod 2)
@@ -479,8 +479,8 @@ def verifyProbablePrimesGenerationResult(result, hashFunction=hashlib.sha256) ->
     if computedQ != q: return False
 
     # Step 9
-    if not mathbase.millerRabin(computedQ, qTests): return False
-    if not mathbase.lucasTest(computedQ): return False
+    if not base.millerRabin(computedQ, qTests): return False
+    if not base.lucasTest(computedQ): return False
 
     outlen = hashFunction().digest_size * 8
 
@@ -509,16 +509,16 @@ def verifyProbablePrimesGenerationResult(result, hashFunction=hashlib.sha256) ->
         W = 0
         for j in range(0, n):
             #   Vj = Hash((domain_parameter_seed + offset + j) mod 2^seedlen)
-            hashPayload = mathbase.intToBytes((domainParameterSeed + offset + j) % twoPowSeedLength)
-            v = mathbase.bytesToInt(hashFunction(hashPayload).digest())
+            hashPayload = base.intToBytes((domainParameterSeed + offset + j) % twoPowSeedLength)
+            v = base.bytesToInt(hashFunction(hashPayload).digest())
 
             # W = sum(Vj * 2^(j * outlen))
             W += v * pow(twoPowOutLength, j)
 
         # Last term of W calculation
         #   Vj = Hash((domain_parameter_seed + offset + j) % 2^seedlen)
-        hashPayload = mathbase.intToBytes((domainParameterSeed + offset + n) % twoPowSeedLength)
-        v = int(mathbase.bytesToInt(hashFunction(hashPayload).digest()) % twoPowB)
+        hashPayload = base.intToBytes((domainParameterSeed + offset + n) % twoPowSeedLength)
+        v = int(base.bytesToInt(hashFunction(hashPayload).digest()) % twoPowB)
 
         # W += Vn * 2^(outlen * n)
         W += v * pow(twoPowOutLength, n)
@@ -534,8 +534,8 @@ def verifyProbablePrimesGenerationResult(result, hashFunction=hashlib.sha256) ->
             continue
 
         # Step 13.7
-        if mathbase.millerRabin(computed_p, pTests):
-            if mathbase.lucasTest(computed_p):
+        if base.millerRabin(computed_p, pTests):
+            if base.lucasTest(computed_p):
                 # Steps 14 and 15
                 if i == counter and computed_p == p: return True
                 else: return False

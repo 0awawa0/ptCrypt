@@ -1,4 +1,4 @@
-import mathbase
+import Math.base as base
 
 
 class Curve:
@@ -29,7 +29,7 @@ class Curve:
 
                 if self.curve.p:
                     low = low % self.curve.p
-                    d = mathbase.egcd(low, self.curve.p)
+                    d = base.egcd(low, self.curve.p)
                     r, a, b = (d["reminder"], d["a"], d["b"])
 
                     if r != 1:
@@ -46,7 +46,7 @@ class Curve:
                 if self.curve.p:
                     low = low % self.curve.p
 
-                    d = mathbase.egcd(low % self.curve.p, self.curve.p)
+                    d = base.egcd(low % self.curve.p, self.curve.p)
                     r, a, b = (d["reminder"], d["a"], d["b"])
                     if r != 1:
                         print(

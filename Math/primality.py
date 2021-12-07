@@ -1,67 +1,6 @@
-import hashlib
 import random
-from Asymmetric.DSA import Primes
-from smallPrimes import SMALL_PRIMES
-
-
-def gcd(n: int, m: int) -> int:
-    """Euklidean algorithm. Finds greatest common divisor of n and m
-
-    Parameters:
-        n: int
-            first number
-        m: int
-            second number
-
-    Returns: 
-        result: int
-            greatest common divisor of n and m.
-    """
-
-    if not n:
-        return m
-    if not m:
-        return n
-
-    while n:
-        n, m = m % n, n
-    return m
-
-
-def egcd(n: int, m: int) -> dict:
-    """Extended Euklidean algorithm. Finds greatest common divisor of n and m
-
-    Parameters:
-        n: int
-            first number
-        m: int
-            second number
-
-    Returns: 
-        result: dict
-            dictionary with specified keys:
-            reminder: int
-                greatest common divisor
-            a, b: int
-                answers to equation an + bm = reminder
-    """
-
-    a, a_ = 0, 1
-    b, b_ = 1, 0
-
-    c, d = n, m
-
-    q = c // d
-    r = c % d
-    while r:
-        c, d = d, r
-        a_, a = a, a_ - q * a
-        b_, b = b, b_ - q * b
-
-        q = c // d
-        r = c % d
-
-    return (d, a, b)
+from Math import base, smallPrimes
+import hashlib
 
 
 def millerRabin(p: int, t: int) -> bool:
@@ -140,7 +79,7 @@ def lucasTest(n: int) -> bool:
     """
 
     # Step 1
-    if n % 2 == 0 or isPerfectSquare(n): return False
+    if n % 2 == 0 or base.isPerfectSquare(n): return False
 
     # Step 2
     def sequence():
@@ -154,7 +93,7 @@ def lucasTest(n: int) -> bool:
             value = -value
     
     for d in sequence():
-        s = jacobiSymbol(d, n)
+        s = base.jacobiSymbol(d, n)
         if s == 0: return False
         if s == -1: break
 
@@ -195,6 +134,23 @@ def lucasTest(n: int) -> bool:
     return Ui == 0
 
 
+def trialDivisionTest(n: int) -> bool:
+
+    root = base.iroot(2, n)
+    if root * root == n: return False
+
+    for prime in smallPrimes.SMALL_PRIMES:
+        if n == prime: return True
+        if n % prime == 0: return False
+        if prime > n: return True
+    
+    x = smallPrimes.SMALL_PRIMES[-1]
+    while x <= root:
+        if n % x == 0: return False
+        x += 2
+    
+    return True
+
 
 def getPrime(n: int, checks: int = 10) -> int:
     """Function generates random prime number with bit length equals n
@@ -216,86 +172,13 @@ def getPrime(n: int, checks: int = 10) -> int:
         num = random.getrandbits(n) | (2 ** (n - 1) + 1)
 
         def check_small_primes(n):
-            for p in SMALL_PRIMES:
+            for p in smallPrimes.SMALL_PRIMES:
                 if n == p: return True
                 if n % p == 0: return False
             return True
 
         if not check_small_primes(num): continue
         if millerRabin(num, checks): return num
-
-
-def isPerfectSquare(p: int) -> bool:
-    """Checks if given number is a perfect square
-
-    Parameters:
-        p: int
-            number to check
-    
-    Returns:
-        result: bool
-            True if number is a perfect square
-            False if number is not a perfect square
-    """
-    
-    if p <= 1: return False
-
-    x = p // 2
-    seen = set([x])
-    while x * x != p:
-        x = (x + (p // x)) // 2
-        if x in seen: return False
-        seen.add(x)
-    return True
-
-
-def jacobiSymbol(a, n):
-    """Recursive Jacobi symbol calculation
-    Details:
-    https://en.wikipedia.org/wiki/Jacobi_symbol
-
-    Algorithm specified in FIPS 186-4, Appendix C.5
-
-    Parameters:
-        a: int
-            numerator
-        
-        n: int
-            denominator
-
-    Returns:
-        result: int
-            returns Jacobi symbol (-1; 0; 1) or None, if 
-            Jacobi symbol is not defined (for even and negative numbers)
-    """
-
-    if n <= 0 or n % 2 == 0: return None
-
-    # Steps 1, 2 and 3
-    a = a % n
-    if a == 1 or n == 1: return 1
-    if a == 0: return 0
-
-    # Step 4
-    e = 0
-    a1 = a
-    while a1 % 2 == 0:
-        a1 >>= 1
-        e += 1
-
-    # Step 5
-    if (e & 1) == 0: s = 1
-    elif n % 8 in (1, 7): s = 1
-    else: s = -1
-
-    # Step 6
-    if n % 4 == 3 and a1 % 4 == 3: s = -s
-
-    # Step 7
-    n1 = n % a1
-
-    # Step 8
-    return s * jacobiSymbol(n1, a1)
 
 
 def primeFactors(n: int) -> list:
@@ -347,117 +230,17 @@ def pollardFactor(n, init=2, bound=2**16):
             prime divisor of n or None if algorithm fails
     """
     a = init
-    for prime in SMALL_PRIMES:
+    for prime in smallPrimes.SMALL_PRIMES:
 
         power = 1
         while power < bound:
             a = pow(a, prime, n)
             power *= prime
 
-        d = gcd(a - 1, n)
+        d = base.gcd(a - 1, n)
         if d > 1 and d < n: return d
         if d == n: return None
     return None
-
-
-def eulersTotient(n: int, factors: list = None) -> int:
-    """Function counts the positive integers up to a given integer n that are
-    relatively prime to n. More about Euler's function:
-    https://en.wikipedia.org/wiki/Euler%27s_totient_function
-
-    Parameters:
-        n: int
-            number to be processed
-
-    Returns: 
-        result: int
-            Euler's totient of given number
-    """
-    if millerRabin(n, 10):
-        return n - 1
-
-    if factors:
-        mul = 1
-        for f in factors:
-            mul *= f
-
-        if mul != n:
-            n_factors = set(primeFactors(n))
-        else:
-            n_factors = set(factors)
-    else:
-        factors = primeFactors(n)
-        n_factors = set(factors)
-
-    count = {}
-    for f in n_factors:
-        count[f] = factors.count(f)
-    result = 1
-    for i in n_factors:
-        result *= (i ** (count[i] - 1)) * (i - 1)
-
-    return result
-
-
-def iroot(a, b):
-    """Function to calculate a-th integer root from b. Example: iroot(2, 4) == 2
-
-    Parameters:
-        a: int
-            Root power
-        
-        b: int
-            Number to calculate root from
-        
-    Returns:
-        result: int
-            Integer a-th root of b
-    """
-
-    if b < 2:
-        return b
-    a1 = a - 1
-    c = 1
-    d = (a1 * c + b // (c ** a1)) // a
-    e = (a1 * d + b // (d ** a1)) // a
-    while c not in (d, e):
-        c, d, e = d, e, (a1 * e + b // (e ** a1)) // a
-    return min(d, e)
-
-
-def intToBytes(n: int, byteorder: str = "big") -> bytes:
-    """Converts given integer number to bytes object
-
-    Parameters:
-        n: int
-            number to convert to bytes
-        
-        byteorder: str
-            order of bytes. Big endian by default
-    
-    Returns:
-        result: bytes
-            list of bytes of number n
-    """
-
-    return n.to_bytes((n.bit_length() + 7) // 8, byteorder.lower())
-
-
-def bytesToInt(b: bytes, byteorder: str = "big") -> int:
-    """Converts given bytes object to integer number
-
-    Parameters:
-        b: bytes
-            bytes to convert into number
-        
-        byteorder: str
-            order of bytes. Big endian by default
-    
-    Returns:
-        result: int
-            bytes converted to int
-    """
-    return int.from_bytes(b, byteorder)
 
 
 def shaweTaylorRandomPrime(length: int, inputSeed: int, hashFunction: callable=hashlib.sha256) -> dict:
@@ -492,12 +275,116 @@ def shaweTaylorRandomPrime(length: int, inputSeed: int, hashFunction: callable=h
                 a counter determined during the generation of the prime
     """
 
+    # Step 1
     if length < 2: return { "status": False, "prime": None, "primeSeed": None, "primeGenCounter": None}
 
+    twoPowLengthMin1 = pow(2, length - 1)
+
+    # Step 2
     if length < 33:
+
+        # Steps 3, 4
         primeSeed = inputSeed
         primeGenCounter = 0
 
-        hashPayload = intToBytes(primeSeed)
-        hashPayload1 = intToBytes(primeSeed + 1)
-        c = hashFunction
+        while True:
+
+            # Hash calculation for step 5
+            hashPayload = base.intToBytes(primeSeed)
+            hashPayload1 = base.intToBytes(primeSeed + 1)
+            h = base.bytesToInt(hashFunction(hashPayload).digest())
+            h1 = base.bytesToInt(hashFunction(hashPayload1).digest())
+
+            # Steps 5, 6, 7
+            #   c = Hash(primeSeed) ^ Hash(primeSeed + 1)
+            c = h ^ h1
+            #   c = 2^(length - 1) + (c mod 2^(length - 1))
+            c = twoPowLengthMin1 + (c % twoPowLengthMin1)
+            #   c = (2 * floor(c / 2)) + 1
+            c = (2  * c // 2) + 1
+
+            # Steps 8, 9
+            primeGenCounter += 1
+            primeSeed += 2
+
+            # Step 10
+            if trialDivisionTest(c):
+                # Step 11
+                return {"status": True, "prime": c, "primeSeed": primeSeed, "primeGenCounter": primeGenCounter}
+            
+            # Step 12
+            if primeGenCounter > 4 * length:
+                return {"status": False, "prime": None, "primeSeed": None, "primeGenCounter": None}
+    
+    # Step 14
+    #   smallerLength = ceil(length / 2) + 1
+    smallerLength = length // 2 + length % 2 + 1
+    recursiveResult = shaweTaylorRandomPrime(smallerLength, inputSeed, hashFunction)
+
+    status = recursiveResult["status"]
+    c0 = recursiveResult["prime"]
+    primeSeed = recursiveResult["primeSeed"]
+    primeGenCounter = recursiveResult["primeGenCounter"]
+
+    # Step 15
+    if not status: return {"status": False, "prime": None, "primeSeed": None, "primeGenCounter": None}
+
+    # Steps 16, 17
+    outlen = hashFunction().digest_size * 8
+
+    #   iterations = ceil(length / outlen) - 1
+    iterations = length // outlen + ((length % outlen) & 1) - 1
+    oldCounter = primeGenCounter
+
+    twoPowOutlen = pow(2, outlen)
+    twoPowLengthMin1 = pow(2, length - 1)
+
+    #Step 18
+    x = 0
+
+    # Step 19
+    for i in range(iterations + 1):
+        hashPayload = base.intToBytes(primeSeed + i)
+        h = base.bytesToInt(hashFunction(hashPayload).digest())
+        x = x + h * pow(twoPowOutlen, i)
+    
+    # Steps 20, 21, 22
+    primeSeed = primeSeed + iterations + 1
+    x = twoPowLengthMin1 + (x % twoPowLengthMin1)
+
+    #   t = ceil(x / (2 * c0))
+    t = x // (2 * c0) + (x % (2 * c0))
+
+    while True:
+        # Steps 23, 24, 25
+        if 2 * c0 + 1 > pow(2, length):
+            #   t = ceil(2 ^ (length - 1) / (2 * c0))
+            t = twoPowLengthMin1 // (2 * c0) + (twoPowLengthMin1 % (2 * c0))
+    
+        c = 2 * t * c0 + 1
+        primeGenCounter += 1
+
+        # Step 26
+        a = 0
+
+        # Step 27
+        for i in range(iterations + 1):
+            hashPayload = base.intToBytes(primeSeed + i)
+            h = base.bytesToInt(hashFunction(hashPayload).digest())
+            a = a + h * pow(twoPowOutlen, i)
+
+        # Steps 28, 29, 30
+        primeSeed = primeSeed + iterations + 1
+        a = 2 + (a % (c - 3))
+        z = pow(a, 2 * t, c)
+
+        # Step 31
+        if 1 == base.gcd(z - 1, c) and 1 == pow(z, c0, c):
+            return {"status": True, "prime": c, "primeSeed": primeSeed, "primeGenCounter": primeGenCounter}
+    
+        # Step 32
+        if primeGenCounter >= (4 * length + oldCounter):
+            return {"status": False, "prime": None, "primeSeed": None, "primeGenCounter": None}
+
+        # Step 33
+        t = t + 1

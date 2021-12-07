@@ -1,5 +1,5 @@
 from Curve import Curve
-import mathbase
+import Math.base as base
 import random
 from datetime import datetime
 
@@ -9,7 +9,7 @@ def factor(n, bound=100, timeout=None):
     start = datetime.now()
     curvesCount = 0
     k = 1
-    for prime in mathbase.SMALL_PRIMES[:bound]:
+    for prime in base.SMALL_PRIMES[:bound]:
         k *= prime
 
     T = None
@@ -23,7 +23,7 @@ def factor(n, bound=100, timeout=None):
         A = random.randint(2, n - 1)
 
         B = (pow(b, 2, n) - pow(a, 3, n) - A * a) % n
-        g = mathbase.gcd(4 * pow(A, 3) + 27 * pow(B, 2), n)
+        g = base.gcd(4 * pow(A, 3) + 27 * pow(B, 2), n)
         if g > 1 and g < n:
             return g
 
