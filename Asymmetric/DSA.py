@@ -1,4 +1,4 @@
-from Math import base
+from Math import base, primality
 import random
 import hashlib
 from datetime import date, datetime
@@ -46,7 +46,7 @@ class Primes:
         self.q = q
 
     def beautyRepr(self, level: int) -> str:
-        """Prints out the object in a beautified way
+        """Returns object's beautified string representation
 
         Parameters:
             level: int
@@ -82,7 +82,7 @@ class Params:
         self.g = g
 
     def beautyRepr(self, level: int) -> str:
-        """Prints out the object in a beautified way
+        """Returns object's beautified string representation
 
         Parameters:
             level: int
@@ -107,9 +107,9 @@ class ProbablePrimesGenerationResult:
         primes: Primes
             primes p and q. If status is False, this field is None
                 
-        verifyParams: ProbablePrimesVerifyParams
+        verifyParams: ProbablePrimesGenerationResult.VerifyParams
             domainParameterSeed and counter parameters for primes verification
-            """
+    """
 
     class VerifyParams:
         """Encapsulates parameters for primes verification
@@ -137,7 +137,7 @@ class ProbablePrimesGenerationResult:
             self.counter = counter
 
         def beautyRepr(self, level: int) -> str:
-            """Prints out the object in a beautified way
+            """Returns object's beautified string representation
 
             Parameters:
                 level: int
@@ -156,7 +156,7 @@ class ProbablePrimesGenerationResult:
             primes: Primes
                 Generated prime numbers
                     
-            verifyParams: ProbablePrimesVerifyParams
+            verifyParams: ProbablePrimesGenerationResult.VerifyParams
                 Parameters for primes verification
         """
 
@@ -165,7 +165,7 @@ class ProbablePrimesGenerationResult:
         self.verifyParams = verifyParams
 
     def beautyRepr(self, level: int) -> str:
-        """Prints out the object in a beautified way
+        """Returns object's beautified string representation
 
         Parameters:
             level: int
@@ -179,28 +179,96 @@ class ProbablePrimesGenerationResult:
 
 
 class ProvablePrimesGenerationResult:
-    """
+    """Encapsulates result of provable primes generation.
+    This result includes status of generation, generated primes and parameters
+    pSeed, qSeed, pGenCounter, qGenCounter used to verify generated primes.
+    See FIPS 186-4 for details
+
+    Attributes:
+        status: bool
+            True if generation was successful
+            False if generation failed
+        
+        primes: Primes
+            primes p and q. If status is False, this field is None
+        
+        verifyParams: ProvablePrimesGenerationResult.VerifyParams
+            pSeed, qSeed, pGenCounter and qGenCounter for primes verification
     """
     
     class VerifyParams:
+        """Encapsulates parameters for primes verification
+        See FIPS 186-4 for details
 
-        def __init__(self, pseed: int, qseed: int, pgenCounter:int, qgenCounter: int):
-            self.pseed = pseed
-            self.qseed = qseed
-            self.pgenCounter = pgenCounter
-            self.qgenCounter = qgenCounter
+        Attributes:
+            firstSeed: int
+            pSeed: int
+            qSeed: int
+            pGenCounter: int
+            qGenCounter: int
+        """
+
+        def __init__(self, firstseed: int, pseed: int, qseed: int, pGenCounter:int, qGenCounter: int):
+            """Initializes object with pSeed, qSeed, pGenCounter and qGenCounter
+
+            Parameters:
+                firstseed: int
+                pseed: int
+                qseed: int
+                pGenCounter: int
+                qGenCounter: int
+            """
+
+            self.firstSeed = firstseed
+            self.pSeed = pseed
+            self.qSeed = qseed
+            self.pGenCounter = pGenCounter
+            self.qGenCounter = qGenCounter
         
         def beautyRepr(self, level: int) -> str:
-            pass
+            """Returns object's beautified string representation
+
+            Parameters:
+                level: int
+                    Indentation level
+            """
+
+            indent = "\t" * level
+            return f"VerifyParams: \n{indent}pSeed: {hex(self.pSeed)}\n{indent}qSeed: {hex(self.qSeed)}\n{indent}pGenCounter: {hex(self.pGenCounter)}\n{indent}qGenCounter: {hex(self.qGenCounter)}"
     
     def __init__(self, status: bool, primes: Primes, verifyParams: VerifyParams):
+        """Initializes object with status, primes, verifyParams
+
+        Parameters:
+            status: bool
+                True if generation succeeded
+                False if generation failed
+            
+            primes: Primes
+                Generated prime numbers p and q
+                This field is None if status is False
+            
+            verifyParams: ProvablePrimesGenerationResult.VerifyParams
+                Parameters for primes verification
+        """
 
         self.status = status
         self.primes = primes
         self.verifyParams = verifyParams
     
     def beautyRepr(self, level: int) -> str:
-        pass
+        """Returns object's beautified string representation
+
+        Parameters:
+            level: int
+                Indentation level
+        """
+
+        indent = "\t" * level
+        primesRepr = self.primes.beautyRepr(level + 1)
+        verifyParamsRepr = self.verifyParams.beautyRepr(level + 1)
+
+        return f"ProvablePrimesGenerationResult: \n{indent}status: {self.status}\n{indent}{primesRepr}\n{indent}{verifyParamsRepr}"
 
 
 class PublicKey:
@@ -333,7 +401,7 @@ def generateProbablePrimes(N: int, L: int, seedLength: int, hashFunction=hashlib
 
     # Steps 3 and 4
     #   n = ceil(L / outlen) - 1
-    if L % outlen: n = L // outlen - 1
+    if L % outlen == 0: n = L // outlen - 1
     else: n = L // outlen
 
     b = L - 1 - (n * outlen)
@@ -348,7 +416,7 @@ def generateProbablePrimes(N: int, L: int, seedLength: int, hashFunction=hashlib
     while 1:
         while 1:
             # Steps 5, 6, 7
-            domainParameterSeed = random.getrandbits(seedLength)
+            domainParameterSeed = random.getrandbits(seedLength) | 2 ** (seedLength - 1)
 
             #   U = Hash(domain_parameter_seed) mod 2^(N - 1)
             U = base.bytesToInt(hashFunction(base.intToBytes(domainParameterSeed)).digest()) % twoPowNMin1
@@ -357,8 +425,8 @@ def generateProbablePrimes(N: int, L: int, seedLength: int, hashFunction=hashlib
             q = twoPowNMin1 + U + 1 - (U % 2)
 
             # Step 8
-            if base.millerRabin(q, qTests):
-                if base.lucasTest(q): break
+            if primality.millerRabin(q, qTests):
+                if primality.lucasTest(q): break
 
         # Precalcualted value, to not calculate it in the loop
         twoTimesQ = 2 * q
@@ -367,7 +435,7 @@ def generateProbablePrimes(N: int, L: int, seedLength: int, hashFunction=hashlib
         offset = 1
 
         # Step 11
-        for counter in range(0, 4 * L - 1):
+        for counter in range(0, 4 * L):
 
             # Steps 11.1 and 11.2
             W = 0
@@ -396,8 +464,8 @@ def generateProbablePrimes(N: int, L: int, seedLength: int, hashFunction=hashlib
             if p >= twoPowLMin1:
 
                 # Step 11.7
-                if base.millerRabin(p, pTests):
-                    if base.lucasTest(p):
+                if primality.millerRabin(p, pTests):
+                    if primality.lucasTest(p):
 
                         # Step 11.8
                         primes = Primes(p, q)
@@ -410,10 +478,12 @@ def generateProbablePrimes(N: int, L: int, seedLength: int, hashFunction=hashlib
 
     return ProbablePrimesGenerationResult(False, None, None)
 
-def verifyProbablePrimesGenerationResult(result, hashFunction=hashlib.sha256) -> bool:
-    """Verifies if primes were generated algorithm from
-    FIPS 186-4, Appendix A.1.1.3
 
+def verifyProbablePrimesGenerationResult(result, hashFunction=hashlib.sha256) -> bool:
+    """Verifies if primes were generated by algorithm from
+    FIPS 186-4, Appendix A.1.1.2
+
+    Note that verification takes at least as much time as generation
 
     Parameters:
         result: ProbablePrimesGenerationResult
@@ -479,8 +549,8 @@ def verifyProbablePrimesGenerationResult(result, hashFunction=hashlib.sha256) ->
     if computedQ != q: return False
 
     # Step 9
-    if not base.millerRabin(computedQ, qTests): return False
-    if not base.lucasTest(computedQ): return False
+    if not primality.millerRabin(computedQ, qTests): return False
+    if not primality.lucasTest(computedQ): return False
 
     outlen = hashFunction().digest_size * 8
 
@@ -534,8 +604,8 @@ def verifyProbablePrimesGenerationResult(result, hashFunction=hashlib.sha256) ->
             continue
 
         # Step 13.7
-        if base.millerRabin(computed_p, pTests):
-            if base.lucasTest(computed_p):
+        if primality.millerRabin(computed_p, pTests):
+            if primality.lucasTest(computed_p):
                 # Steps 14 and 15
                 if i == counter and computed_p == p: return True
                 else: return False
@@ -560,6 +630,7 @@ def getFirstSeed(N: int, seedlen: int):
         firstSeed: int
             generated first seed or None if generation fails
     """
+
     firstSeed = 0
     
     nIsCorrect = False
@@ -570,11 +641,175 @@ def getFirstSeed(N: int, seedlen: int):
     if seedlen < N: return None
 
     twoPowNMin1 = pow(2, N - 1)
-    while firstSeed < twoPowNMin1: random.getrandbits(seedlen)
+    while firstSeed < twoPowNMin1: 
+        firstSeed = random.getrandbits(seedlen)
+        firstSeed |= (2 ** (seedlen - 1) + 1)
     return firstSeed
 
 
-def generateProvablePrimes(L: int, N: int, firstSeed: int) -> ProvablePrimesGenerationResult:
+def generateProvablePrimes(N: int, L: int, firstSeed: int, hashFunction: callable = hashlib.sha256) -> ProvablePrimesGenerationResult:
+    """Generates provabele primes p and q by algorithm from
+    FIPS 186-4, Appendix A.1.2.1.2
 
-    if (L, N) not in APPROVED_LENGTHS: return ProvablePrimesGenerationResult(False, None, None)
+    Parameters:
+        N: int
+            Bit length of q - smaller prime
+        
+        L: int
+            Bit length of p - bigger prime
+        
+        firstSeed: int
+            the first seed to be used
+        
+        hashFunction: callable
+            Hash function conforming to hashlib protocols.
+            Hash function output length must not be less than N
+            By FIPS 186-4 one of APPROVED_HASHES should be used
     
+    Returns:
+        result: ProvablePrimesGenerationResult
+            Result of primes generation
+    """
+
+    # Step 1
+    if (N, L) not in APPROVED_LENGTHS: return ProvablePrimesGenerationResult(False, None, None)
+    
+    # Step 2
+    d = primality.shaweTaylorRandomPrime(N, firstSeed)
+    if not d["status"]: return ProvablePrimesGenerationResult(False, None, None)
+
+    q = d["prime"]
+    qSeed = d["primeSeed"]
+    qGenCounter = d["primeGenCounter"]
+
+    # Step 3
+    #   p0Length = ceil(L / 2 + 1)
+    if L % 2 == 0: p0Length = L // 2 + 1
+    else: p0Length = L // 2 + 2
+
+    d = primality.shaweTaylorRandomPrime(p0Length, qSeed)
+    if not d["status"]: return ProvablePrimesGenerationResult(False, None, None)
+
+    p0 = d["prime"]
+    pSeed = d["primeSeed"]
+    pGenCounter = d["primeGenCounter"]
+
+    outlen = hashFunction().digest_size * 8
+
+    # Step 4, 5
+    if L % outlen == 0: iterations = L // outlen - 1
+    else: iterations = L // outlen
+
+    oldCounter = pGenCounter
+
+    twoPowOutlen = pow(2, outlen)
+    twoPowLMin1 = pow(2, L - 1)
+
+    # Steps 6, 7
+    x = 0
+    for i in range(iterations + 1):
+        hashPayload = base.intToBytes(pSeed + i)
+        h = base.bytesToInt(hashFunction(hashPayload).digest())
+
+        x = x + h * pow(twoPowOutlen, i)
+    
+    # Steps 8, 9
+    pSeed = pSeed + iterations + 1
+    x = twoPowLMin1 + (x % twoPowLMin1)
+
+    # Step 10
+    #   t = ceil(x / (2 * q * p0))
+    if x % (2 * q * p0) == 0: t = x // (2 * q * p0)
+    else: t = x // (2 * q * p0) + 1
+
+    while True:
+
+        # Step 11
+        if 2 * t * q * p0 + 1 > twoPowLMin1 * 2: t = twoPowLMin1 // (2 * q * p0) + (twoPowLMin1 % (2 * q * p0) != 0)
+
+        # Steps 12, 13
+        p = 2 * t * q * p0 + 1
+        pGenCounter += 1
+
+        # Steps 14, 15
+        a = 0
+        for i in range(iterations + 1):
+            hashPayload = base.intToBytes(pSeed + i)
+            h = base.bytesToInt(hashFunction(hashPayload).digest())
+
+            a = a + h * pow(twoPowOutlen, i)
+    
+        # Steps 16, 17, 18
+        pSeed = pSeed + iterations + 1
+        a = 2 + (a % (p - 3))
+        z = pow(a, 2 * t * q, p)
+
+        # Step 19
+        if 1 == base.gcd(z - 1, p) and 1 == pow(z, p0, p):
+            primes = Primes(p, q)
+            verifyParams = ProvablePrimesGenerationResult.VerifyParams(firstSeed, pSeed, qSeed, pGenCounter, qGenCounter)
+            return ProvablePrimesGenerationResult(True, primes, verifyParams)
+    
+        # Step 20
+        if pGenCounter > (4 * L + oldCounter): return ProvablePrimesGenerationResult(False, None, None)
+
+        # Step 21
+        t += 1
+
+
+def verifyProvablePrimesGenerationResult(result: ProvablePrimesGenerationResult, hashFunction: callable=hashlib.sha256) -> bool:
+    """Verifies if primes were generated by algorithm from
+    FIPS 186-4, Appendix 1.2.1.2
+
+    Note that verification takes at least as much time as generation
+
+    Parameters:
+        result: ProvablePrimesGenerationResult
+            Value to be verified
+        
+        hashFunction: callable
+            Hash function thath conforms to hashlib protocols.
+            This function must be equal to the one used for primes generation
+            By default hashlib.sha256 is used
+            By FIPS 186-4, one of APPROVED_HASHES should be used
+
+    Returns:
+        result: bool
+            True if verification succeeds
+            False if verification fails
+    """
+
+    p = result.primes.p
+    q = result.primes.q
+    firstSeed = result.verifyParams.firstSeed
+    pSeed = result.verifyParams.pSeed
+    qSeed = result.verifyParams.qSeed
+    pGenCounter = result.verifyParams.pGenCounter
+    qGenCounter = result.verifyParams.qGenCounter
+
+    L = p.bit_length()
+    N = q.bit_length()
+
+    if (N, L) not in APPROVED_LENGTHS: return False
+
+    if firstSeed < pow(2, N - 1): return False
+    if pow(2, N) <= q: return False
+    if pow(2, L) <= p: return False
+    if (p - 1) % q != 0: return False
+
+    check = generateProvablePrimes(N, L, firstSeed, hashFunction)
+    checkP = check.primes.p
+    checkQ = check.primes.q
+    checkPSeed = check.verifyParams.pSeed
+    checkQSeed = check.verifyParams.qSeed
+    checkPGenCounter = check.verifyParams.pGenCounter
+    checkQGenCounter = check.verifyParams.qGenCounter
+
+    if checkP != p: return False
+    if checkQ != q: return False
+    if checkPSeed != pSeed: return False
+    if checkQSeed != qSeed: return False
+    if checkPGenCounter != pGenCounter: return False
+    if checkQGenCounter != qGenCounter: return False
+
+    return True

@@ -192,16 +192,15 @@ def primeFactors(n: int) -> list:
         result: list
             all factors of n
     """
-    if millerRabin(n, 10):
-        return [n]
+    if millerRabin(n, 10): return [n]
 
-    import math
     factors = []
     while n % 2 == 0:
         factors.append(2)
         n = n // 2
-    sq_root = round(math.sqrt(n))
-    for i in range(3, sq_root, 2):
+    
+    sqRoot = base.iroot(2, n)
+    for i in range(3, sqRoot, 2):
         while n % i == 0:
             n = n // i
             factors.append(i)
@@ -333,7 +332,8 @@ def shaweTaylorRandomPrime(length: int, inputSeed: int, hashFunction: callable=h
     outlen = hashFunction().digest_size * 8
 
     #   iterations = ceil(length / outlen) - 1
-    iterations = length // outlen + ((length % outlen) & 1) - 1
+    iterations = length // outlen + (length % outlen != 0) - 1
+
     oldCounter = primeGenCounter
 
     twoPowOutlen = pow(2, outlen)
@@ -353,13 +353,13 @@ def shaweTaylorRandomPrime(length: int, inputSeed: int, hashFunction: callable=h
     x = twoPowLengthMin1 + (x % twoPowLengthMin1)
 
     #   t = ceil(x / (2 * c0))
-    t = x // (2 * c0) + (x % (2 * c0))
+    t = x // (2 * c0) + (x // (2 * c0) != 0)
 
     while True:
         # Steps 23, 24, 25
         if 2 * c0 + 1 > pow(2, length):
             #   t = ceil(2 ^ (length - 1) / (2 * c0))
-            t = twoPowLengthMin1 // (2 * c0) + (twoPowLengthMin1 % (2 * c0))
+            t = twoPowLengthMin1 // (2 * c0) + (twoPowLengthMin1 % (2 * c0) != 0)
     
         c = 2 * t * c0 + 1
         primeGenCounter += 1
