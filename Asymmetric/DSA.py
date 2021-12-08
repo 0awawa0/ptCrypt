@@ -547,6 +547,19 @@ def verifyProbablePrimesGenerationResult(result, hashFunction=hashlib.sha256) ->
 
 
 def getFirstSeed(N: int, seedlen: int):
+    """Generates first seed for provable primes generation
+
+    Parameters:
+        N: int
+            Length of prime q in bits
+        
+        seedlen: int
+            length of seed to return, must not be less than N
+    
+    Returns:
+        firstSeed: int
+            generated first seed or None if generation fails
+    """
     firstSeed = 0
     
     nIsCorrect = False
@@ -559,6 +572,7 @@ def getFirstSeed(N: int, seedlen: int):
     twoPowNMin1 = pow(2, N - 1)
     while firstSeed < twoPowNMin1: random.getrandbits(seedlen)
     return firstSeed
+
 
 def generateProvablePrimes(L: int, N: int, firstSeed: int) -> ProvablePrimesGenerationResult:
 
