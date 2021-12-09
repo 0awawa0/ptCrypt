@@ -1,7 +1,7 @@
 from Math import base, primality
-import random
 import hashlib
 from datetime import date, datetime
+import secrets
 
 
 APPROVED_LENGTHS = [
@@ -314,6 +314,19 @@ class PublicKey:
 
         self.params = params
         self.y = y
+    
+    def beautyRepr(self, level: int = 1) -> str:
+        """Returns object's beautified string representation
+
+        Parameters:
+            level: int
+                Indentation level
+        """
+
+        indent = "\t" * level
+        paramsRepr = self.params.beautyRepr(level + 1)
+
+        return f"DSA Public Key: \n{indent}{paramsRepr}\n{indent}y: {hex(self.y)}"
 
 
 class PrivateKey:
@@ -339,6 +352,19 @@ class PrivateKey:
             """
         self.params = params
         self.x = x
+    
+    def beautyRepr(self, level: int = 1) -> str:
+        """Returns object's beautified string representation
+
+        Parameters:
+            level: int
+                Indentation level
+        """
+
+        indent = "\t" * level
+        paramsRepr = self.params.beautyRepr(level + 1)
+
+        return f"DSA Private Key: \n{indent}{paramsRepr}\n{indent}x: {hex(self.x)}"
 
 
 class Signature:
@@ -435,7 +461,7 @@ def generateProbablePrimes(N: int, L: int, seedLength: int, hashFunction=hashlib
     while 1:
         while 1:
             # Steps 5, 6, 7
-            domainParameterSeed = random.getrandbits(seedLength) | 2 ** (seedLength - 1)
+            domainParameterSeed = secrets.randbits(seedLength) | 2 ** (seedLength - 1)
 
             #   U = Hash(domain_parameter_seed) mod 2^(N - 1)
             U = base.bytesToInt(hashFunction(base.intToBytes(domainParameterSeed)).digest()) % twoPowNMin1
@@ -661,7 +687,7 @@ def getFirstSeed(N: int, seedlen: int):
 
     twoPowNMin1 = pow(2, N - 1)
     while firstSeed < twoPowNMin1: 
-        firstSeed = random.getrandbits(seedlen)
+        firstSeed = secrets.randbits(seedlen)
         firstSeed |= (2 ** (seedlen - 1) + 1)
     return firstSeed
 
@@ -1056,3 +1082,45 @@ def generateParams(
         params = generateUnverifiableG(primes.primes)[0]
 
     return params
+
+
+def generateKeys(params: Params, useAdditionalBits: bool = False) -> tuple:
+    """Generates public and private keys for DSA by algorithms specified
+    in FIPS 186-4, Appendix B.1.1 and B.1.2. This function implements both algorithms.
+    Set useAdditionalBits to True to use algorithm from B.1.1 and to False to use algorithm from B.1.2
+
+    Parameters:
+        params: Params
+            DSA domain parameters p, q, and g
+        
+        useAdditionalBits: bool
+            Specifies the algorithm to use.
+            True - use FIPS 186-4, Appendix B.1.1
+            False - use FIPS 186-4, Appendix B.1.2
+    
+    Returns:
+        result: tuple<PublicKey, PrivateKey>
+            generated pair of keys
+    """
+
+    p = params.primes.p
+    q = params.primes.q
+    g = params.g
+
+    N = q.bit_length()
+    L = p.bit_length()
+
+    if (N, L) not in APPROVED_LENGTHS: return (None, None)
+
+    if useAdditionalBits:
+        c = secrets.randbits(N + 64)
+        x = (c % (q - 1)) + 1
+    else:
+        while True:
+            c = secrets.randbits(N)
+            if c <= q - 2: break
+        x = c + 1
+    
+    y = pow(g, x, p)
+
+    return (PublicKey(params, y), PrivateKey(params, x))

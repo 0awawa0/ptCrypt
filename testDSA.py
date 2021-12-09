@@ -96,6 +96,24 @@ def testRandomParamsVerification():
         assert DSA.partiallyVerifyRootGeneration(params)
 
 
+def testKeysGeneartion():
+
+    for i in range(10):
+        N, L = DSA.APPROVED_LENGTHS[0]
+    
+        params = DSA.generateParams(N, L)
+        public, private = DSA.generateKeys(params)
+        print(public.beautyRepr())
+        print(private.beautyRepr())
+
+    for i in range(10):
+        N, L = DSA.APPROVED_LENGTHS[0]
+    
+        params = DSA.generateParams(N, L)
+        public, private = DSA.generateKeys(params, True)
+        print(public.beautyRepr())
+        print(private.beautyRepr())
+
 if __name__ == "__main__":
     # testProbablePrimeGeneration()
     # testProvablePrimeGeneration()
@@ -103,4 +121,5 @@ if __name__ == "__main__":
     # testProvablePrimeVerification()
     # testUnverifiableG()
     # testVerifiableG()
-    testRandomParamsVerification()
+    # testRandomParamsVerification()
+    testKeysGeneartion()
