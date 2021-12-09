@@ -391,6 +391,19 @@ class Signature:
         self.params = params
         self.r = r
         self.s = s
+    
+    def beautyRepr(self, level: int = 1) -> str:
+        """Returns object's beautified string representation
+
+        Parameters:
+            level: int
+                Indentation level
+        """
+
+        indent = "\t" * level
+        paramsRepr = self.params.beautyRepr(level + 1)
+
+        return f"DSA Signature: \n{indent}{paramsRepr}\n{indent}r: {hex(self.r)}\n{indent}s: {hex(self.s)}"
 
 
 def generateProbablePrimes(N: int, L: int, seedLength: int, hashFunction=hashlib.sha256) -> ProbablePrimesGenerationResult:
@@ -1100,7 +1113,7 @@ def generateKeys(params: Params, useAdditionalBits: bool = False) -> tuple:
     
     Returns:
         result: tuple<PublicKey, PrivateKey>
-            generated pair of keys
+            generated pair of keys. May return tuples of None values if inappropriate parametes were given
     """
 
     p = params.primes.p
@@ -1124,3 +1137,158 @@ def generateKeys(params: Params, useAdditionalBits: bool = False) -> tuple:
     y = pow(g, x, p)
 
     return (PublicKey(params, y), PrivateKey(params, x))
+
+
+def generateSecret(params: Params, useAdditionalBits: bool = False) -> int:
+    """Generates per-message random secret by algorithms specified in FIPS 186-4, Appendix B.2
+
+    Parameters:
+        params: Params
+            DSA domain parameters p, q, and g
+        
+        useAdditionalBits: bool
+            Specifies algorithm to use
+            True - use FIPS 186-4, Appendix B.2.1
+            False - use FIPS 186-4, Appendix B.2.2
+    
+    Returns:
+        result: int
+            random number appropriate to use for DSA signing with given parameters.
+            May return None if inappropriate parameters were given
+    """
+
+    p = params.primes.p
+    q = params.primes.q
+    N = q.bit_length()
+    L = p.bit_length()
+
+    if (N, L) not in APPROVED_LENGTHS: return None
+
+    if useAdditionalBits:
+        c = secrets.randbits(N + 64)
+        k = (c % (q - 1)) + 1
+        
+        try:
+            pow(k, -1, q)
+        except Exception:
+            return None
+
+        return k
+    else:
+        while True:
+            c = secrets.randbits(N)
+            if c <= q - 2: break
+        k = c + 1
+        
+        try:
+            pow(k, -1, q)
+        except Exception:
+            return None
+        
+        return k
+
+
+def sign(
+    message: bytes,
+    key: PrivateKey,
+    secret: int, 
+    hashFunction: callable = hashlib.sha256
+) -> Signature:
+    """Signs message with given private key and secret
+
+    Parmeters:
+        message: bytes
+            Message to be signed
+        
+        key: PrivateKey
+            DSA private key
+        
+        secret: int
+            unique random secret for message signature
+        
+        hashFunction: callable
+            hash function for signature. This function must conform to hashlib protocols. 
+            By default hashlib.sha256 is used.
+            If this value is None, message bytes will be signed instead of its hash
+
+    Returns:
+        signature: SIgnature
+            Signature object that contains r, s and domain parameters
+    """
+
+    p = key.params.primes.p
+    q = key.params.primes.q
+    g = key.params.g
+    x = key.x
+
+    N = q.bit_length()
+
+    zLength = N
+    if hashFunction != None:
+        outlen = hashFunction().digest_size * 8
+        zLength = min(N, outlen)
+        message = hashFunction(message).digest()
+    
+    r = pow(g, secret, p) % q
+    z = base.bytesToInt(message) & (2 ** zLength - 1)
+    s = (pow(secret, -1, q) * (z + x * r)) % q
+
+    if r == 0 or s == 0: return None
+    return Signature(key.params, r, s)
+
+
+def verify(
+    message: bytes,
+    signature: Signature,
+    key: PublicKey, 
+    hashFunction: callable = hashlib.sha256
+) -> bool:
+    """Verifies given signature
+
+    Parameters:
+        message: bytes
+            Message which signature is to be checked
+        
+        signature: Signature
+            message's signature
+        
+        key: PublicKey
+            DSA public key
+        
+        hashFunction: callable
+            signature's hash function. This function must conform to hashlib protocols. 
+            By default hashlib.sha256 is used.
+            If this value is None, message bytes will be verified instead of its hash
+
+    Returns:
+        result: bool
+            True if signature is valid
+            False if signature is invalid
+    """
+
+    p = key.params.primes.p
+    q = key.params.primes.q
+    g = key.params.g
+    y = key.y
+
+    N = q.bit_length()
+
+    r = signature.r
+    s = signature.s
+
+    if r <= 0 or r >= q: return False
+    if s <= 0 or r >= q: return False
+    
+    zLength = N
+    if hashFunction != None:
+        outlen = hashFunction().digest_size * 8
+        zLength = min(N, outlen)
+        message = hashFunction(message).digest()
+
+    w = pow(s, -1, q)
+    z = base.bytesToInt(message) & (2 ** zLength - 1)
+    u1 = (z * w) % q
+    u2 = (r * w) % q
+    v = ((pow(g, u1, p) * pow(y, u2, p)) % p) % q
+
+    return v == r

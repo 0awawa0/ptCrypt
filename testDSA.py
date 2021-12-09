@@ -1,7 +1,8 @@
 from Asymmetric import DSA
 from datetime import datetime
 import hashlib
-from Math import primality
+from Math import base, primality
+from random import getrandbits
 
 
 def testProbablePrimeGeneration():
@@ -114,6 +115,34 @@ def testKeysGeneartion():
         print(public.beautyRepr())
         print(private.beautyRepr())
 
+
+def testSignature():
+
+    N, L = DSA.APPROVED_LENGTHS[0]
+    for _ in range(10):
+        msg = base.intToBytes(getrandbits(4096))
+
+        params = DSA.generateParams(N, L)
+        public, private = DSA.generateKeys(params)
+        secret = DSA.generateSecret(params)
+
+        signature = DSA.sign(msg, private, secret)
+        print(signature.beautyRepr())
+        assert DSA.verify(msg, signature, public)
+    
+    for _ in range(10):
+        msg = base.intToBytes(getrandbits(4096))
+
+        params = DSA.generateParams(N, L)
+        public, private = DSA.generateKeys(params)
+        secret = DSA.generateSecret(params)
+
+        signature = DSA.sign(msg, private, secret, None)
+        print(signature.beautyRepr())
+        assert DSA.verify(msg, signature, public, None)
+
+
+
 if __name__ == "__main__":
     # testProbablePrimeGeneration()
     # testProvablePrimeGeneration()
@@ -122,4 +151,5 @@ if __name__ == "__main__":
     # testUnverifiableG()
     # testVerifiableG()
     # testRandomParamsVerification()
-    testKeysGeneartion()
+    # testKeysGeneartion()
+    testSignature()
