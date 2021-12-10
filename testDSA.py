@@ -1,6 +1,8 @@
+import secrets
 from Asymmetric import DSA
 from datetime import datetime
 import hashlib
+from Attacks.DSA import repeatedSecretAttack
 from Math import base, primality
 from random import getrandbits
 
@@ -142,6 +144,23 @@ def testSignature():
         assert DSA.verify(msg, signature, public, None)
 
 
+def testRepeatedSecretAttack():
+
+    for N, L in DSA.APPROVED_LENGTHS:
+        params = DSA.generateParams(N, L)
+        public, private = DSA.generateKeys(params)
+
+        secret = DSA.generateSecret(params)
+
+        message1 = base.intToBytes(secrets.randbits(4096))
+        signature1 = DSA.sign(message1, private, secret, hashFunction=None)
+
+        message2 = base.intToBytes(secrets.randbits(4096))
+        signature2 = DSA.sign(message2, private, secret, hashFunction=None)
+
+        recoveredPrivate = repeatedSecretAttack(message1, signature1, message2, signature2, hashFunction=None)
+        assert recoveredPrivate.x == private.x
+
 
 if __name__ == "__main__":
     # testProbablePrimeGeneration()
@@ -152,4 +171,5 @@ if __name__ == "__main__":
     # testVerifiableG()
     # testRandomParamsVerification()
     # testKeysGeneartion()
-    testSignature()
+    # testSignature()
+    testRepeatedSecretAttack()

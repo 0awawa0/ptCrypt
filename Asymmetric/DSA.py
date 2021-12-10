@@ -1188,6 +1188,54 @@ def generateSecret(params: Params, useAdditionalBits: bool = False) -> int:
         return k
 
 
+def prepareMessage(
+    message: bytes,
+    params: Params,
+    hashFunction: callable = hashlib.sha256
+) -> int:
+    """Processes the message before signing or verifying according to FIPS 186-4.
+    The procedure works as follows:
+        1) compute zLength = min(N, outlen), 
+            where outlen is the length of hash function. 
+            If hash function is not specified, then just take N
+        2) compute h = Hash(message) if hash function is specified, or jsut message otherwise
+        3) take zLength leftmost bits of h and return as an integer
+    
+    So the value returned from this function can be directly inserted into signature/verification calculation
+
+    Parameters:
+        message: bytes
+            Message to process
+        
+        params: Params
+            DSA domain parameters
+        
+        hashFunction: callable
+            hash function to use for message process. Must conform to hashlib protocols.
+            By default hashlib.sha256 is used. This value also might be None, then no hash function will be used
+    
+    Returns:
+        result: int
+            Processed message as integer
+    """
+
+    q = params.primes.q
+    N = q.bit_length()
+
+    zLength = N
+    if hashFunction != None:
+        outlen = hashFunction().digest_size * 8
+        zLength = min(N, outlen)
+        message = hashFunction(message).digest()
+    
+    message = base.bytesToInt(message)
+    
+    if message.bit_length() > zLength:
+        message = message >> (message.bit_length() - zLength)
+    
+    return message
+
+
 def sign(
     message: bytes,
     key: PrivateKey,
@@ -1223,15 +1271,10 @@ def sign(
 
     N = q.bit_length()
 
-    zLength = N
-    if hashFunction != None:
-        outlen = hashFunction().digest_size * 8
-        zLength = min(N, outlen)
-        message = hashFunction(message).digest()
+    message = prepareMessage(message, key.params, hashFunction)
     
     r = pow(g, secret, p) % q
-    z = base.bytesToInt(message) & (2 ** zLength - 1)
-    s = (pow(secret, -1, q) * (z + x * r)) % q
+    s = (pow(secret, -1, q) * (message + x * r)) % q
 
     if r == 0 or s == 0: return None
     return Signature(key.params, r, s)
@@ -1279,15 +1322,10 @@ def verify(
     if r <= 0 or r >= q: return False
     if s <= 0 or r >= q: return False
     
-    zLength = N
-    if hashFunction != None:
-        outlen = hashFunction().digest_size * 8
-        zLength = min(N, outlen)
-        message = hashFunction(message).digest()
+    message = prepareMessage(message, key.params, hashFunction)
 
     w = pow(s, -1, q)
-    z = base.bytesToInt(message) & (2 ** zLength - 1)
-    u1 = (z * w) % q
+    u1 = (message * w) % q
     u2 = (r * w) % q
     v = ((pow(g, u1, p) * pow(y, u2, p)) % p) % q
 
