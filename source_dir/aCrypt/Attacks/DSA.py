@@ -1,4 +1,4 @@
-from Asymmetric import DSA
+from aCrypt.Asymmetric import DSA
 
 
 def repeatedSecretAttack(

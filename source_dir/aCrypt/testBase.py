@@ -1,7 +1,6 @@
-from Math import base, primality
+from aCrypt.Math import base, primality
 from datetime import datetime
 import random
-from Math.primality import millerRabin, primeFactors, shaweTaylorRandomPrime
 
 
 def testJacobi():

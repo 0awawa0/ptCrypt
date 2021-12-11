@@ -1,9 +1,9 @@
 import secrets
-from Asymmetric import DSA
+from aCrypt.Asymmetric import DSA
 from datetime import datetime
 import hashlib
-from Attacks.DSA import repeatedSecretAttack
-from Math import base, primality
+from aCrypt.Attacks.DSA import repeatedSecretAttack
+from aCrypt.Math import base, primality
 from random import getrandbits
 
 

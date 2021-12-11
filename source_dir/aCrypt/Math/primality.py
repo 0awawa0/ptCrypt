@@ -1,5 +1,5 @@
 import random
-from Math import base, smallPrimes
+from aCrypt.Math import base, smallPrimes
 import hashlib
 
 
