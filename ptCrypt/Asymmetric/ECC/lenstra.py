@@ -1,4 +1,4 @@
-from ptCrypt.Asymmetric.Curve import Curve
+from ptCrypt.Asymmetric.ECC import Curve
 import Math.base as base
 import random
 from datetime import datetime

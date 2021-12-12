@@ -1,4 +1,4 @@
-from aCrypt.Math.smallPrimes import SMALL_PRIMES
+from ptCrypt.Math.smallPrimes import SMALL_PRIMES
 
 
 def gcd(n: int, m: int) -> int:

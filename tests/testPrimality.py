@@ -1,8 +1,6 @@
-from aCrypt.Math import base, primality
+from ptCrypt.Math import base, primality
 from datetime import datetime
 import random
-
-from Math.primality import millerRabin, primeFactors, shaweTaylorRandomPrime
 
 
 def measurePrimalityTestTime():
@@ -78,13 +76,13 @@ def testShaweTaylor():
         t.append((end - start).microseconds)
 
         start = datetime.now()
-        p = shaweTaylorRandomPrime(length, random.getrandbits(length - 1))
+        p = primality.shaweTaylorRandomPrime(length, random.getrandbits(length - 1))
         while not p["status"]:
-            p = shaweTaylorRandomPrime(length, random.getrandbits(length - 1))
+            p = primality.shaweTaylorRandomPrime(length, random.getrandbits(length - 1))
         end = datetime.now()
         t1.append((end - start).microseconds)
 
-        assert millerRabin(p["prime"], 64)
+        assert primality.millerRabin(p["prime"], 64)
     
     avg = sum(t) / len(t)
     avg1 = sum(t1) / len(t1)
