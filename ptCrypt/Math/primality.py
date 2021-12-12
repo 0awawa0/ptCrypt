@@ -1,4 +1,5 @@
 import random
+from typing import Iterable
 from ptCrypt.Math import base, smallPrimes
 import hashlib
 
@@ -7,6 +8,12 @@ def millerRabin(p: int, t: int) -> bool:
     """Miller-Rabin primality test. Error probability is (1/4)^t
     More about Miller-Rabin test:
     https://en.wikipedia.org/wiki/Miller–Rabin_primality_test
+
+    To get same error probability with better performance consider 
+    using less Miller-Rabin tests followed by one Lucas test.
+    For example, FIPS 186-4 (DSA standard) recommends switching from 
+    64 Miller-Rabin test to 19 Miller-Rabin tests followed by one Lucas 
+    test for 160 bit prime q.
 
     Algorithm also specified in FIPS 186-4, Appendix C.3.1
 
@@ -66,6 +73,7 @@ def millerRabin(p: int, t: int) -> bool:
 
 def lucasTest(n: int) -> bool:
     """Lucas pseudoprime primality test. Error probability 4/15
+    It is recommended to run Lucas test after  few Miller-Rabin tests.
     Algorithm specified in FIPS 186-4, Appendix C.3.3
 
     Parameters:
@@ -135,6 +143,19 @@ def lucasTest(n: int) -> bool:
 
 
 def trialDivisionTest(n: int) -> bool:
+    """Test for primality by trial division. Unlike Lucas test or Miller-Rabin test, this 
+    test is deterministic, but it is extremely slow. You should run this test only for
+    small numbers of size around 32-bits.
+
+    Parameters:
+        n: int
+            Number to check for primality
+    
+    Returns:
+        result: bool
+            True if number is definitely prime
+            False if number is definitely not prime
+    """
 
     root = base.iroot(2, n)
     if root * root == n: return False
@@ -153,19 +174,21 @@ def trialDivisionTest(n: int) -> bool:
 
 
 def getPrime(n: int, checks: int = 10) -> int:
-    """Function generates random prime number with bit length equals n
+    """Generates random probable prime number using Miller-Rabin test
 
     Parameters:
         n: int
             bit length of generated number
+            returned number is guaranteed to have this bit length
 
         checks: int
             count of primality checks to perform
 
     Returns: 
         result: int
-            number probable with probability 0.25**(checks)
+            probable prime number with probability 0.25**(checks)
     """
+
     while True:
         if n <= 1: return
 
@@ -182,7 +205,13 @@ def getPrime(n: int, checks: int = 10) -> int:
 
 
 def primeFactors(n: int) -> list:
-    """Naive integer factorization function
+    """Naive integer factorization function. Extremely slow.
+
+    The fucntion first checks if the number is prime with 10 Miller-Rabin tests,
+    and if it is then function will return list with only this particular number.
+
+    Then, function divides given number by 2, 3, 5, 7, 9 and so on until it reaches
+    square root of given number or until numbers is not equal to 1.
 
     Parameters:
         n: int
@@ -211,39 +240,56 @@ def primeFactors(n: int) -> list:
     return factors
 
 
-def pollardFactor(n, init=2, bound=2**16):
-    """Pollard's p - 1 factorization method
+def pollardFactor(n, init=2, bound=2**16, numbers: Iterable = None):
+    """Pollard's p - 1 factorization method. This is a general customizable method.
+
     More details:
     https://en.wikipedia.org/wiki/Pollard%27s_p_%E2%88%92_1_algorithm
 
     Parameters:
         n: int
             number to be factorized
+
         init: int
-            initial value
+            initial value, 2 by default
+
         bound:
-            smoothness bound
+            smoothness bound, 65536 by default
+        
+        numbers: Iterable
+            numbers that method must use for powers of init value.
+            Note, that method doesn't just raise init to some ith power of the given iterable
+            but searches for such power of ith number, that this power is greater or equal to smoothness bound.
+            This trick generally increases success rate of the method. 
+            If None given, list of small primes from smallPrimes module will be used.
+            For list of small primes method successfully find factors up to 38 bits long.
     
     Returns:
         result: int
             prime divisor of n or None if algorithm fails
     """
     a = init
-    for prime in smallPrimes.SMALL_PRIMES:
 
-        power = 1
-        while power < bound:
-            a = pow(a, prime, n)
-            power *= prime
+    if not numbers:
+        numbers = smallPrimes.SMALL_PRIMES
 
+    for i in numbers:
+        if i <= 1: continue
+
+        power = i
+        while power < bound: power *= i
+
+        a = pow(a, power, n)
         d = base.gcd(a - 1, n)
         if d > 1 and d < n: return d
         if d == n: return None
     return None
 
 
-def shaweTaylorRandomPrime(length: int, inputSeed: int, hashFunction: callable=hashlib.sha256) -> dict:
-    """Shawe-Taylor random prime generation routine
+def shaweTaylor(length: int, inputSeed: int, hashFunction: callable=hashlib.sha256) -> dict:
+    """Shawe-Taylor random prime generation routine. Generated number is definitely prime.
+    The algorithm is slow, but will with great chance work faster than getPrime function 
+    up to 512 bit numbers.
 
     Algorithm specified by FIPS 186-4, Appendix C.6
 
@@ -318,7 +364,7 @@ def shaweTaylorRandomPrime(length: int, inputSeed: int, hashFunction: callable=h
     # Step 14
     #   smallerLength = ceil(length / 2) + 1
     smallerLength = length // 2 + length % 2 + 1
-    recursiveResult = shaweTaylorRandomPrime(smallerLength, inputSeed, hashFunction)
+    recursiveResult = shaweTaylor(smallerLength, inputSeed, hashFunction)
 
     status = recursiveResult["status"]
     c0 = recursiveResult["prime"]

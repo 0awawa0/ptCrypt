@@ -1,5 +1,5 @@
-from ptCrypt.Math import primality
-from datetime import datetime
+from ptCrypt.Math import primality, smallPrimes
+from datetime import date, datetime
 import random
 
 
@@ -59,9 +59,9 @@ def testShaweTaylor():
     t.append((end - start).microseconds)
 
     start = datetime.now()
-    p = primality.shaweTaylorRandomPrime(length, random.getrandbits(length - 1))
+    p = primality.shaweTaylor(length, random.getrandbits(length - 1))
     while not p["status"]:
-        p = primality.shaweTaylorRandomPrime(length, random.getrandbits(length - 1))
+        p = primality.shaweTaylor(length, random.getrandbits(length - 1))
     end = datetime.now()
     t1.append((end - start).microseconds)
 
@@ -71,3 +71,35 @@ def testShaweTaylor():
     avg1 = sum(t1) / len(t1)
     print(f"Avg: {avg} microseconds")
     print(f"Avg1: {avg1} microseconds")
+
+
+def testPollardFactor():
+
+    primeLength = 38
+    i = 7
+    p = primality.shaweTaylor(primeLength, i)["prime"]
+    while not p:
+        i += 1
+        p = primality.shaweTaylor(primeLength, i)["prime"]
+    
+    i += 1
+    q = primality.shaweTaylor(primeLength * 2, i)["prime"]
+    while not q:
+        i += 1
+        q = primality.shaweTaylor(primeLength * 2, i)["prime"]
+
+    n = p * q
+
+    start = datetime.now()
+
+    init = 2
+    bound = 2**16
+    factor = primality.pollardFactor(n, init = init, bound = bound, numbers=smallPrimes.SMALL_PRIMES)
+    while not factor and bound < 2 ** primeLength:
+        init *= 17
+        bound *= 2
+        factor = primality.pollardFactor(n, init = init, bound = bound, numbers=smallPrimes.SMALL_PRIMES)
+
+    end = datetime.now()
+    print(end - start)
+    assert factor == p or factor == q

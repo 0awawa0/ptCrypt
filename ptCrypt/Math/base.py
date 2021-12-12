@@ -62,7 +62,8 @@ def egcd(n: int, m: int) -> dict:
 
 
 def isPerfectSquare(p: int) -> bool:
-    """Checks if given number is a perfect square
+    """Checks if given number is a perfect square. 
+    A perfect square is an integer that is a square of another integer.
 
     Parameters:
         p: int
