@@ -1,14 +1,16 @@
 from distutils.core import setup
+from setuptools import find_packages
+
 
 setup(
-    name = 'aCrypt',
-    packages = ['aCrypt'],
-    version = '0.0.1',
+    name = 'ptCrypt',
+    packages = find_packages(),
+    version = '0.0.2',
     description = 'Cryptographic and cryptography related algorithms implemented with pure Python',
     author = 'awawa',
     author_email = 'mail.0awawa0@gmail.com',
-    url = 'https://github.com/0awawa0/aCrypt',
-    download_url = 'https://github.com/0awawa0/aCrypt/archive/refs/tags/v0.0.1.tar.gz',
+    url = 'https://github.com/0awawa0/ptCrypt',
+    download_url = 'https://github.com/0awawa0/ptCrypt/archive/refs/tags/0.0.2.tar.gz',
     keywords = ['Cryptography'],
     classifiers = [],
 )
