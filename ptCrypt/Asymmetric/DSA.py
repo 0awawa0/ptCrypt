@@ -1,4 +1,4 @@
-from aCrypt.Math import base, primality
+from ptCrypt.Math import base, primality
 import hashlib
 from datetime import date, datetime
 import secrets

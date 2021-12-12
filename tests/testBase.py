@@ -1,4 +1,4 @@
-from aCrypt.Math import base, primality
+from ptCrypt.Math import base, primality
 from datetime import datetime
 import random
 
