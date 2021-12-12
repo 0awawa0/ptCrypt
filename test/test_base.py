@@ -10,4 +10,5 @@ def testJacobi():
 
 
 if __name__ == "__main__":
-    testJacobi()
+    print(base.__file__)
+    # testJacobi()
