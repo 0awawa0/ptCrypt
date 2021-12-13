@@ -1,5 +1,5 @@
 from ptCrypt.Math import primality, smallPrimes
-from datetime import date, datetime
+from datetime import date, datetime, time
 import random
 
 
@@ -99,6 +99,30 @@ def testPollardFactor():
         init *= 17
         bound *= 2
         factor = primality.pollardFactor(n, init = init, bound = bound, numbers=smallPrimes.SMALL_PRIMES)
+
+    end = datetime.now()
+    print(end - start)
+    assert factor == p or factor == q
+
+
+def testLenstraFactor():
+    primeLength = 35
+    i = 7
+    p = primality.shaweTaylor(primeLength, i)["prime"]
+    while not p:
+        i += 1
+        p = primality.shaweTaylor(primeLength, i)["prime"]
+    
+    i += 1
+    q = primality.shaweTaylor(primeLength * 2, i)["prime"]
+    while not q:
+        i += 1
+        q = primality.shaweTaylor(primeLength * 2, i)["prime"]
+
+    n = p * q
+
+    start = datetime.now()
+    factor = primality.lenstraFactor(n, timeout=60)
 
     end = datetime.now()
     print(end - start)

@@ -1,6 +1,8 @@
 import random
 from typing import Iterable
 from ptCrypt.Math import base, smallPrimes
+from ptCrypt.Asymmetric.ECC import Curve
+from datetime import datetime
 import hashlib
 
 
@@ -240,7 +242,7 @@ def primeFactors(n: int) -> list:
     return factors
 
 
-def pollardFactor(n, init=2, bound=2**16, numbers: Iterable = None):
+def pollardFactor(n, init=2, bound=2**16, numbers: Iterable = smallPrimes.SMALL_PRIMES):
     """Pollard's p - 1 factorization method. This is a general customizable method.
 
     More details:
@@ -269,9 +271,6 @@ def pollardFactor(n, init=2, bound=2**16, numbers: Iterable = None):
             prime divisor of n or None if algorithm fails
     """
     a = init
-
-    if not numbers:
-        numbers = smallPrimes.SMALL_PRIMES
 
     for i in numbers:
         if i <= 1: continue
@@ -434,3 +433,64 @@ def shaweTaylor(length: int, inputSeed: int, hashFunction: callable=hashlib.sha2
 
         # Step 33
         t = t + 1
+
+
+def lenstraFactor(n: int, bound = 2**64, numbers: Iterable = smallPrimes.SMALL_PRIMES[:100], timeout = None) -> int:
+    """Lenstra elliptic curve factorization method
+
+    Parameter:
+        n: int
+            number to be factorized
+        
+        bound:
+            smoothness bound, 65536 by default
+        
+        numbers: Iterable
+            numbers that method must use for multipliers of points.
+            Method doesn't just multiply points with some ith number
+            but searches for such power of ith number, that this power is 
+            greater or equal to smooth bound.
+            This trick generlaly increases success rate of the method.
+            By default first 100 prime numbers is used.
+        
+        timeout: int
+            factorization timeout in seconds. By default None meaning no timeout.
+            Without timeout method never returns until it finds prime divisor of n.
+    
+    Returns:
+        result: int
+            prime divisor of n or None if timeout reached
+    """
+
+    start = datetime.now()
+    curvesCount = 0
+
+    while 1:
+        
+        curvesCount += 1
+        if timeout and (datetime.now() - start).seconds > timeout:
+            return None
+
+        a = random.randint(2, n - 1)
+        b = random.randint(2, n - 1)
+        A = random.randint(2, n - 1)
+
+        B = (pow(b, 2, n) - pow(a, 3, n) - A * a) % n
+        g = base.gcd(4 * pow(A, 3) + 27 * pow(B, 2), n)
+        if g > 1 and g < n: return g
+
+        curve = Curve.Curve(A, B, n)
+        P = curve.point(a, b)
+        if curve.hasSingularPoints(): continue
+
+        for number in numbers:
+            t = number
+            while t < bound: t *= number
+
+            Q = t * P
+            if type(Q) is int:
+                if Q < n: return Q
+                break
+            P = Q
+
+
