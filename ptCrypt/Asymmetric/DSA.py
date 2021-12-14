@@ -2,23 +2,7 @@ from ptCrypt.Math import base, primality
 import hashlib
 from datetime import date, datetime
 import secrets
-
-
-APPROVED_LENGTHS = [
-    (160, 1024),
-    (224, 2048),
-    (256, 2048),
-    (256, 3072)
-]
-
-
-APPROVED_HASHES = [
-    hashlib.sha1,
-    hashlib.sha224,
-    hashlib.sha256,
-    hashlib.sha384,
-    hashlib.sha512
-]
+from ptCrypt.Util.keys import FFC_APPROVED_LENGTHS
 
 
 class Primes:
@@ -432,20 +416,20 @@ def generateProbablePrimes(N: int, L: int, seedLength: int, hashFunction=hashlib
     """
 
     # Steps 1 and 2
-    if (N, L) not in APPROVED_LENGTHS:
+    if (N, L) not in FFC_APPROVED_LENGTHS:
         return ProbablePrimesGenerationResult(False, None, None)
     if seedLength < N:
         ProbablePrimesGenerationResult(False, None, None)
 
     # Setting count of Miller-Rabin tests to perform before single Lucas test
     # according to Appendix C.3
-    if (N, L) == APPROVED_LENGTHS[0]:
+    if (N, L) == FFC_APPROVED_LENGTHS[0]:
         pTests = 3
         qTests = 19
-    elif (N, L) == APPROVED_LENGTHS[1]:
+    elif (N, L) == FFC_APPROVED_LENGTHS[1]:
         pTests = 3
         qTests = 24
-    elif (N, L) == APPROVED_LENGTHS[2]:
+    elif (N, L) == FFC_APPROVED_LENGTHS[2]:
         pTests = 3
         qTests = 27
     else:
@@ -569,17 +553,17 @@ def verifyProbablePrimesGenerationResult(result, hashFunction=hashlib.sha256) ->
     L = p.bit_length()
 
     # Step 3
-    if (N, L) not in APPROVED_LENGTHS: return False
+    if (N, L) not in FFC_APPROVED_LENGTHS: return False
 
     # Setting count of Miller-Rabin tests to perform before single Lucas test
     # according to Appendix C.3
-    if (N, L) == APPROVED_LENGTHS[0]:
+    if (N, L) == FFC_APPROVED_LENGTHS[0]:
         pTests = 3
         qTests = 19
-    elif (N, L) == APPROVED_LENGTHS[1]:
+    elif (N, L) == FFC_APPROVED_LENGTHS[1]:
         pTests = 3
         qTests = 24
-    elif (N, L) == APPROVED_LENGTHS[2]:
+    elif (N, L) == FFC_APPROVED_LENGTHS[2]:
         pTests = 3
         qTests = 27
     else:
@@ -692,7 +676,7 @@ def getFirstSeed(N: int, seedlen: int):
     firstSeed = 0
     
     nIsCorrect = False
-    for lengths in APPROVED_LENGTHS:
+    for lengths in FFC_APPROVED_LENGTHS:
         nIsCorrect = nIsCorrect or (N in lengths)
     
     if not nIsCorrect: return None
@@ -730,7 +714,7 @@ def generateProvablePrimes(N: int, L: int, firstSeed: int, hashFunction: callabl
     """
 
     # Step 1
-    if (N, L) not in APPROVED_LENGTHS: return ProvablePrimesGenerationResult(False, None, None)
+    if (N, L) not in FFC_APPROVED_LENGTHS: return ProvablePrimesGenerationResult(False, None, None)
     
     # Step 2
     d = primality.shaweTaylorRandomPrime(N, firstSeed)
@@ -848,7 +832,7 @@ def verifyProvablePrimesGenerationResult(result: ProvablePrimesGenerationResult,
     L = p.bit_length()
     N = q.bit_length()
 
-    if (N, L) not in APPROVED_LENGTHS: return False
+    if (N, L) not in FFC_APPROVED_LENGTHS: return False
 
     if firstSeed < pow(2, N - 1): return False
     if pow(2, N) <= q: return False
@@ -1076,7 +1060,7 @@ def generateParams(
             such as (N, L) pair not from APPROVED_LENGTHS or hash function digest size less than N
     """
 
-    if (N, L) not in APPROVED_LENGTHS: return None
+    if (N, L) not in FFC_APPROVED_LENGTHS: return None
     outlen = hashFunction().digest_size * 8
     if outlen < N: return None
 
@@ -1123,7 +1107,7 @@ def generateKeys(params: Params, useAdditionalBits: bool = False) -> tuple:
     N = q.bit_length()
     L = p.bit_length()
 
-    if (N, L) not in APPROVED_LENGTHS: return (None, None)
+    if (N, L) not in FFC_APPROVED_LENGTHS: return (None, None)
 
     if useAdditionalBits:
         c = secrets.randbits(N + 64)
@@ -1162,7 +1146,7 @@ def generateSecret(params: Params, useAdditionalBits: bool = False) -> int:
     N = q.bit_length()
     L = p.bit_length()
 
-    if (N, L) not in APPROVED_LENGTHS: return None
+    if (N, L) not in FFC_APPROVED_LENGTHS: return None
 
     if useAdditionalBits:
         c = secrets.randbits(N + 64)
