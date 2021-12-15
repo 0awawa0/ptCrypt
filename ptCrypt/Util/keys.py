@@ -169,3 +169,95 @@ def getECCKeyLength(securityLevel: int) -> int:
     elif securityLevel in range(113, 129): return ECC_APPROVED_LENGTHS[2]
     elif securityLevel in range(129, 193): return ECC_APPROVED_LENGTHS[3]
     else: return ECC_APPROVED_LENGTHS[4]
+
+
+def millerRabinTestsForFFC(N: int, L: int) -> int:
+    """Returns recommended count of Miller-Rabin tests for finite-field cryptosystems with
+    given key lengths to achieve 2**(-80) error probability according to FIPS 186-4, Appendix C.3.
+
+    If given parameters N and L are not in FFC_APPROVED_LENGTHS, function returns 0.
+
+    Parameters:
+        N: int
+            smaller prime length
+        
+        L: int
+            bigger prime length
+    
+
+    Returns:
+        result: int
+            recommended count of tests to apply for both primes
+    """
+
+    if (N, L) not in FFC_APPROVED_LENGTHS: return 0
+    if (N, L) == FFC_APPROVED_LENGTHS[0]: return 40
+    if (N, L) == FFC_APPROVED_LENGTHS[1]: return 56
+    if (N, L) == FFC_APPROVED_LENGTHS[2]: return 56
+    if (N, L) == FFC_APPROVED_LENGTHS[3]: return 64
+
+    return 0
+
+
+def millerRabinAndLucasTestsForFFC(N: int, L: int) -> tuple:
+    """Returns recommended count of Miller-Rabin test followed by single Lucas test for
+    finite-field cryptosystems with given key lengths to achieve 2**(-80) error probability
+    according to FIPS 186-4, Appendix C.3.
+
+    If given parametes N and L are not in FFC_APPROVED_LENGTS, function returns None.
+
+    Parameters:
+        N: int
+            smaller prime length
+        
+        L: int
+            bigger prime length
+    
+    Returns:
+        result: tuple
+            pair of counts of Miller-Rabin tests followed by one Lucas test for smaller and bigger 
+            prime respectively
+    """
+
+    if (N, L) not in FFC_APPROVED_LENGTHS: return None
+    if (N, L) == FFC_APPROVED_LENGTHS[0]: return (19, 3)
+    if (N, L) == FFC_APPROVED_LENGTHS[1]: return (24, 3)
+    if (N, L) == FFC_APPROVED_LENGTHS[2]: return (27, 3)
+    if (N, L) == FFC_APPROVED_LENGTHS[3]: return (27, 2)
+    return None
+
+
+def millerRabinTestsForIFC(N: int, withAuxiliaryPrimes: bool = False) -> tuple:
+    """Returns recommended counts of Miller-Rabin tests for integer-factorization cryptosystems
+    with given key length to achieve 2**(-80) error probability according
+    to FIPS 186-4, Appendix C.3.
+
+    If given key length is not in IFC_APPROVED_LENGTHS, function returns None.
+    Note also that FIPS 186-4 does specify any values for 7680 and 15360, as they are not
+    approved for use in IFC by FIPS 186-4, but SP800-57 specifies these values.
+    So for these values function will return count of tests for 3072.
+
+    Parameters:
+        N: int
+            cryptosystem key length
+    
+    Returns:
+        result: tuple
+            pair of counts of Miller-Rabin to apply. First element is count of tests to apply to 
+            key factors. 
+            And the second count is the count of tests to apply to primes p1, p2, q1 and q2.
+            See FIPS 186-4, Appendix B.3. to find out more about p1, p2, q1 and q2.
+    """
+
+    if N not in IFC_APPROVED_LENGTHS: return None
+
+    if withAuxiliaryPrimes:
+        if N == IFC_APPROVED_LENGTHS[0]: return (5, 28)
+        if N == IFC_APPROVED_LENGTHS[1]: return (5, 38)
+        if N >= IFC_APPROVED_LENGTHS[2]: return (4, 41)
+        return None
+    else:
+        if N == IFC_APPROVED_LENGTHS[0]: return (40, 0)
+        if N == IFC_APPROVED_LENGTHS[1]: return (56, 0)
+        if N == IFC_APPROVED_LENGTHS[2]: return (64, 0)
+        return None

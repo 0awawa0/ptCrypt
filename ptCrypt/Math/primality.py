@@ -495,33 +495,83 @@ def lenstraFactor(n: int, bound = 2**64, numbers: Iterable = smallPrimes.SMALL_P
             P = Q
 
 
-def ifcProvablePrime(L: int, N1: int, N2: int, firstSeed: int, e: int, hashFunction: callable = hashlib.sha256) -> tuple:
+def ifcProvablePrime(L: int, e: int, firstSeed: int, N1: int = 1, N2: int = 1, hashFunction: callable = hashlib.sha256) -> tuple:
+    """Provable prime construction algorithm specified in FIPS 186-4, Appendix C.10.
+    This algorithm is supposed to be used for integer-factorization cryptosystems (RSA), therefore
+    L is supposed to be one of IFC_APPROVED_LENGTHS divided by 2.
+
+    Besides the prime itself this algorithm can construct auxiliary primes p1 and p2 with lengths N1 and N2 respectively.
+    To find out more about these primes see FIPS 186-4, Appendix B.3.1.
+
+    Parameters:
+        L: int
+            required bit length for generated prime
+        
+        e: int
+            IFC public exponent. 
+            If, for some reason, you use this method for other purposes, set this value to 2 or any other prime number.
+        
+        firstSeed: int
+            seed value for algorithm, this must be either some random value, or the value returned by this function 
+            (if used for second prime generation in IF cryptosystems)
+
+        N1: int
+            required bit length for first auxiliary prime. 
+            Default value is 1, meaning the first auxiliary prime won't be generated.
+        
+        N2: int
+            required bit length for second auxiliary prime.
+            Default value is 1, meaning the second auxiliary prime won't be generated.
+
+        hashFunction: callable
+            hash function to use for this algorithm. Function must conform to hashlib protocols.
+            It is recommended to use one of APPROVED_HASHES. By default hashlib.sha256 is used.
+    
+    Returns:
+        result: tuple
+            tuple of values p, p1, p2 and pSeed, where:
+                p - generated prime number,
+                p1 - first auxiliary prime number
+                p2 - second auxiliary prime number
+                pSeed - seed value (this is used by IFC keys generation functions to generate the second prime)
+
+            Note, function might return None if passed parameters are wrong, or generation fails. 
+            If parameters are fine, then you should try again with new firstSeed value.
+    """
 
     if L % 2: ceilL = L // 2 + 1
     else: ceilL = L // 2
 
+    # Step 1. Check that N1 and N2 are appropriate. 
+    # This doesn't check that N1 and N2 are safe. 
+    # Check FIPS 186-4, Appendix B.3.1 for requirements to N1 and N2.
     if N1 + N2 > L - ceilL - 4: return None
 
+    # Step 2
     if N1 == 1:
         p1 = 1
         p2Seed = firstSeed
     
+    # Step 3
     if N1 >= 2:
         d = shaweTaylor(N1, firstSeed)
         if not d["status"]: return None
         p1 = d["prime"]
         p2Seed = d["primeSeed"]
 
+    # Step 4
     if N2 == 1:
         p2 = 1
         p0Seed = p2Seed
     
+    # Step 5
     if N2 >= 2:
         d = shaweTaylor(N2, p2Seed)
         if not d["status"]: return None
         p2 = d["prime"]
         p0Seed = d["primeSeed"]
     
+    # Step 6
     d = shaweTaylor(ceilL + 1, p0Seed)
     if not d["status"]: return None
 
@@ -529,16 +579,20 @@ def ifcProvablePrime(L: int, N1: int, N2: int, firstSeed: int, e: int, hashFunct
     pSeed = d["primeSeed"]
 
     outlen = hashFunction().digest_size * 8
+
+    # Steps 7, 8, 9
     iterations = L // outlen
     if L % outlen == 0: iterations -= 1
-
     pGenCounter = 0
     x = 0
+
+    # Step 10
     for i in range(iterations + 1):
         hashPayload = base.intToBytes(pSeed + i)
         hashResult = hashFunction(hashPayload).digest()
         x += base.bytesToInt(hashResult) * pow(2, i * outlen)
     
+    # Steos 11, 12
     pSeed = pSeed + iterations + 1
 
     # 665857/470832 = 1.41421356237 is a good rational approximation of sqrt(2)
@@ -546,35 +600,47 @@ def ifcProvablePrime(L: int, N1: int, N2: int, firstSeed: int, e: int, hashFunct
     modulus = pow(2, L) - coeff
     x = coeff + (x % modulus)
 
+    # Steps 13, 14
     if base.gcd(p0, base.gcd(p1, p2)) != 1: return None
-
     y = (1 - pow(p0 * p1, -1, p2)) % p2
 
+    # Step 15
     coeff1 = 2 * y * p0 * p1 + x
     coeff2 = 2 * p0 * p1 * p2
-
     t = coeff1 // coeff2
     if coeff1 % coeff2: t += 1
 
     while True:
+
+        # Step 16
         if (2 * (t * p2 - y) * p0 * p1 + 1) > pow(2, L):
             coeff1 = 2 * y * p0 * p1 + coeff
             t = coeff1 // coeff2
             if coeff1 % coeff2: t += 1
     
+        # Steps 17, 18
         p = 2 * (t * p2 - y) * p0 * p1 + 1
         pGenCounter += 1
+
+        # Step 19
         if base.gcd(p - 1, e) == 1:
+            # Step 19.1
             a = 0
+
+            # Step 19.2
             for i in range(iterations + 1):
                 hashPayload = base.intToBytes(pSeed + i)
                 hashResult = hashFunction(hashPayload).digest()
                 a += base.bytesToInt(hashResult) * pow(2, i * outlen)
             
+            # Step 19.3, 19.4, 19.5
             pSeed += iterations + 1
             a = 2 + (a % (p - 3))
             z = pow(a, 2 * (t * p2 - y) * p1, p)
+
+            # Step 19.6
             if 1 == base.gcd(z - 1, p) and 1 == pow(z, p0, p): return (p, p1, p2, pSeed)
         
+        # Steps 20, 21
         if pGenCounter >= 5 * L: return None
         t += 1
