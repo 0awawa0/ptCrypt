@@ -1,6 +1,9 @@
 from ptCrypt.Math import primality, smallPrimes
+from ptCrypt.Asymmetric.RSA import getSeed
 from datetime import date, datetime, time
 import random
+
+from ptCrypt.Util.keys import IFC_APPROVED_LENGTHS
 
 
 def measurePrimalityTestTime():
@@ -127,3 +130,18 @@ def testLenstraFactor():
     end = datetime.now()
     print(end - start)
     assert factor == p or factor == q
+
+
+def testIfcProvablePrime():
+
+    
+    N = IFC_APPROVED_LENGTHS[0]
+    N1 = 1
+    N2 = 1
+    seed = getSeed(N)
+    p, p1, p2, pSeed = primality.ifcProvablePrime(N // 2, N1, N2, seed, 65537)
+
+    assert primality.millerRabin(p, 27)
+    print(p)
+    print(p1)
+    print(p2)

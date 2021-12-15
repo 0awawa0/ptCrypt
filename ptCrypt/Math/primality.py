@@ -4,6 +4,7 @@ from ptCrypt.Math import base, smallPrimes
 from ptCrypt.Asymmetric.ECC import Curve
 from datetime import datetime
 import hashlib
+import math
 
 
 def millerRabin(p: int, t: int) -> bool:
@@ -494,3 +495,86 @@ def lenstraFactor(n: int, bound = 2**64, numbers: Iterable = smallPrimes.SMALL_P
             P = Q
 
 
+def ifcProvablePrime(L: int, N1: int, N2: int, firstSeed: int, e: int, hashFunction: callable = hashlib.sha256) -> tuple:
+
+    if L % 2: ceilL = L // 2 + 1
+    else: ceilL = L // 2
+
+    if N1 + N2 > L - ceilL - 4: return None
+
+    if N1 == 1:
+        p1 = 1
+        p2Seed = firstSeed
+    
+    if N1 >= 2:
+        d = shaweTaylor(N1, firstSeed)
+        if not d["status"]: return None
+        p1 = d["prime"]
+        p2Seed = d["primeSeed"]
+
+    if N2 == 1:
+        p2 = 1
+        p0Seed = p2Seed
+    
+    if N2 >= 2:
+        d = shaweTaylor(N2, p2Seed)
+        if not d["status"]: return None
+        p2 = d["prime"]
+        p0Seed = d["primeSeed"]
+    
+    d = shaweTaylor(ceilL + 1, p0Seed)
+    if not d["status"]: return None
+
+    p0 = d["prime"]
+    pSeed = d["primeSeed"]
+
+    outlen = hashFunction().digest_size * 8
+    iterations = L // outlen
+    if L % outlen == 0: iterations -= 1
+
+    pGenCounter = 0
+    x = 0
+    for i in range(iterations + 1):
+        hashPayload = base.intToBytes(pSeed + i)
+        hashResult = hashFunction(hashPayload).digest()
+        x += base.bytesToInt(hashResult) * pow(2, i * outlen)
+    
+    pSeed = pSeed + iterations + 1
+
+    # 665857/470832 = 1.41421356237 is a good rational approximation of sqrt(2)
+    coeff = pow(2, L - 1) * 665857 // 470832
+    modulus = pow(2, L) - coeff
+    x = coeff + (x % modulus)
+
+    if base.gcd(p0, base.gcd(p1, p2)) != 1: return None
+
+    y = (1 - pow(p0 * p1, -1, p2)) % p2
+
+    coeff1 = 2 * y * p0 * p1 + x
+    coeff2 = 2 * p0 * p1 * p2
+
+    t = coeff1 // coeff2
+    if coeff1 % coeff2: t += 1
+
+    while True:
+        if (2 * (t * p2 - y) * p0 * p1 + 1) > pow(2, L):
+            coeff1 = 2 * y * p0 * p1 + coeff
+            t = coeff1 // coeff2
+            if coeff1 % coeff2: t += 1
+    
+        p = 2 * (t * p2 - y) * p0 * p1 + 1
+        pGenCounter += 1
+        if base.gcd(p - 1, e) == 1:
+            a = 0
+            for i in range(iterations + 1):
+                hashPayload = base.intToBytes(pSeed + i)
+                hashResult = hashFunction(hashPayload).digest()
+                a += base.bytesToInt(hashResult) * pow(2, i * outlen)
+            
+            pSeed += iterations + 1
+            a = 2 + (a % (p - 3))
+            z = pow(a, 2 * (t * p2 - y) * p1, p)
+            if 1 == base.gcd(z - 1, p) and 1 == pow(z, p0, p): return (p, p1, p2, pSeed)
+        
+        if pGenCounter >= 5 * L: return None
+        t += 1
