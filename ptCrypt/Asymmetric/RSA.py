@@ -1,6 +1,7 @@
+import random
 import secrets
 from ptCrypt.Math import base, primality
-from ptCrypt.Util.keys import IFC_APPROVED_LENGTHS, getIFCSecurityLevel, millerRabinTestsForIFC
+from ptCrypt.Util.keys import IFC_APPROVED_LENGTHS, getIFCSecurityLevel, millerRabinTestsForIFC, getIFCAuxiliaryPrimesLegths
 from secrets import randbits
 
 
@@ -153,3 +154,58 @@ def generateProbablePrimes(e: int, N: int) -> tuple:
         if i >= 5 * N // 2: return None
     
     return (p, q)
+
+
+def geneareteProvablePrimesWithConditions(e: int, N: int, seed: int) -> tuple:
+    """Provable primes generation method which satisfies security conditions from FIPS 186-4.
+    Generation algorithm is specified by FIPS 186-4, Appendix B.3.4.
+
+    Parameters:
+        e: int
+            public exponent for RSA
+        
+        N: int
+            RSA key length
+        
+        seed: int
+            random seed to use for generation
+    
+    Returns:
+        result: tuple
+            pair of provably prime numbers p and q such that n = p * q has length N.
+            May return None if either passed parameters are incorrect, or generation fails.
+            If parameters are good, retry generation with different seed.
+    """
+
+    if N != 1024 and N != 2048 and N != 3072: return None
+    if e <= 2 ** 16 or e >= 2 ** 256: return None
+
+    securityLevel = getIFCSecurityLevel(N)
+    if seed.bit_length() != 2 * securityLevel: return None
+
+    workingSeed = seed
+
+    p1Len, p2Len = getIFCAuxiliaryPrimesLegths(N)
+    q1Len, q2Len = getIFCAuxiliaryPrimesLegths(N)
+
+    res = primality.ifcProvablePrime(N // 2, e, workingSeed, p1Len, p2Len)
+    if not res: return None
+
+    p, p1, p2, pSeed = res
+    
+    workingSeed = pSeed
+
+    while True:
+        res = primality.ifcProvablePrime(N // 2, e, workingSeed, q1Len, q2Len)
+        if not res: return None
+
+        q, q1, q2, qSeed = res
+        workingSeed = qSeed
+        if abs(p - q) > pow(2, N // 2 - 100): break
+    
+    qSeed = 0
+    pSeed = 0
+    workingSeed = 0
+    return (p, q)
+
+

@@ -1,4 +1,5 @@
 import hashlib
+import random
 
 
 FFC_APPROVED_LENGTHS = [
@@ -261,3 +262,50 @@ def millerRabinTestsForIFC(N: int, withAuxiliaryPrimes: bool = False) -> tuple:
         if N == IFC_APPROVED_LENGTHS[1]: return (56, 0)
         if N == IFC_APPROVED_LENGTHS[2]: return (64, 0)
         return None
+
+
+def getIFCAuxiliaryPrimesLegths(N: int, probablePrimes: bool = False) -> tuple:
+    """Returnes auxiliary primes (p1, p2) lengths for IFC primes generation according
+    to table B.1, from FIPS 186-4, Appendix B.3.1. FIPS 186-4 specifies only values for
+    1024, 2048 and 3072.
+
+    Parameters:
+        N: int
+            IFC key length
+        
+        probablePrimes: bool
+            indicates if p and q are generated as probable or provable primes. 
+            There are different requirements for different generation methods.
+    
+    Returns:
+        result: tuple
+            p1 and p2 lengths, generated randomly but in such 
+            a way that they satisfy conditions from FIPS 186-4
+    """
+
+    if probablePrimes:
+        if N == IFC_APPROVED_LENGTHS[0]:
+            return (random.randint(101, 495 // 2), random.randint(101, 496 // 2))
+        elif N == IFC_APPROVED_LENGTHS[1]:
+            return (random.randint(141, 1007 // 2), random.randint(141, 1007 // 2))
+        elif N == IFC_APPROVED_LENGTHS[2]:
+            return (random.randint(171, 1517 // 2), random.randint(171, 1518 // 2))
+        elif N == IFC_APPROVED_LENGTHS[3]:
+            return (random.randint(301, 3821 // 2), random.randint(301, 3822 // 2))
+        elif N == IFC_APPROVED_LENGTHS[4]:
+            return (random.randint(511, 7661 // 2), random.randint(511, 7661 // 2))
+        else:
+            return None
+    else:
+        if N == IFC_APPROVED_LENGTHS[0]:
+            return (random.randint(101, 239 // 2), random.randint(101, 239 // 2))
+        elif N == IFC_APPROVED_LENGTHS[1]:
+            return (random.randint(141, 493 // 2), random.randint(141, 494 // 2))
+        elif N == IFC_APPROVED_LENGTHS[2]:
+            return (random.randint(171, 749 // 2), random.randint(171, 750 // 2))
+        elif N == IFC_APPROVED_LENGTHS[3]:
+            return (random.randint(301, 1901 // 2), random.randint(301, 1901 // 2))
+        elif N == IFC_APPROVED_LENGTHS[4]:
+            return (random.randint(511, 3819 // 2), random.randint(511, 3820 // 2))
+        else:
+            return None
