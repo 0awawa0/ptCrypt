@@ -209,3 +209,25 @@ def geneareteProvablePrimesWithConditions(e: int, N: int, seed: int) -> tuple:
     return (p, q)
 
 
+def generateProbablePrimesWithConditions(e: int, N: int, seed: int, provablePrimes: bool = True) -> tuple:
+
+    if N != 1024 and N != 2048 and N != 3072: return None
+    if e <= 2 ** 16 or e >= 2 ** 256: return None
+
+    securityLevel = getIFCSecurityLevel(N)
+    if securityLevel.bit_length() != 2 * securityLevel: return None
+
+    p1Len, p2Len = getIFCAuxiliaryPrimesLegths(N, True)
+
+    res = primality.shaweTaylor(p1Len, seed)
+    if not res["status"]: return None
+
+    p1 = res["prime"]
+    primeSeed = res["primeSeed"]
+
+    res = primality.shaweTaylor(p2Len, primeSeed)
+    if not res["status"]: return None
+
+    p2 = res["prime"]
+    primeSeed = res["primeSeed"]
+

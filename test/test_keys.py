@@ -1,4 +1,4 @@
-from ptCrypt.Util.keys import ECC_APPROVED_LENGTHS, FFC_APPROVED_LENGTHS, IFC_APPROVED_LENGTHS, getECCKeyLength, getECCSecurityLevel, getFFCKeyLength, getFFCSecurityLevel, getIFCKeyLength, getIFCSecurityLevel
+from ptCrypt.Util.keys import ECC_APPROVED_LENGTHS, FFC_APPROVED_LENGTHS, IFC_APPROVED_LENGTHS, getECCKeyLength, getECCSecurityLevel, getFFCKeyLength, getFFCSecurityLevel, getIFCAuxiliaryPrimesLegths, getIFCKeyLength, getIFCSecurityLevel
 
 
 def testGetFFCSecurityLevel():
@@ -101,3 +101,52 @@ def testGetECCKeyLength():
     assert getECCKeyLength(194) == ECC_APPROVED_LENGTHS[4]
     assert getECCKeyLength(256) == ECC_APPROVED_LENGTHS[4]
     assert getECCKeyLength(512) == ECC_APPROVED_LENGTHS[4]
+
+
+def testGetIFCAuxiliaryPrimesLengths():
+
+    N = 1024
+    for _ in range(100):
+        p1Len, p2Len = getIFCAuxiliaryPrimesLegths(N, True)
+        assert p1Len > 100 and p2Len > 100 and p1Len + p2Len < 496
+    
+    for _ in range(100):
+        p1Len, p2Len = getIFCAuxiliaryPrimesLegths(N, False)
+        assert p1Len > 100 and p2Len > 100 and p1Len + p2Len < 239
+    
+    N = 2048
+    for _ in range(100):
+        p1Len, p2Len = getIFCAuxiliaryPrimesLegths(N, True)
+        assert p1Len > 140 and p2Len > 140 and p1Len + p2Len < 1007
+    
+    for _ in range(100):
+        p1Len, p2Len = getIFCAuxiliaryPrimesLegths(N, False)
+        assert p1Len > 140 and p2Len > 140 and p1Len + p2Len < 494
+    
+    N = 3072
+    for _ in range(100):
+        p1Len, p2Len = getIFCAuxiliaryPrimesLegths(N, True)
+        assert p1Len > 170 and p2Len > 170 and p1Len + p2Len < 1518
+    
+    for _ in range(100):
+        p1Len, p2Len = getIFCAuxiliaryPrimesLegths(N, False)
+        assert p1Len > 170 and p2Len > 170 and p1Len + p2Len < 750
+    print(5)
+    
+    N = 7680
+    for _ in range(100):
+        p1Len, p2Len = getIFCAuxiliaryPrimesLegths(N, True)
+        assert p1Len > 300 and p2Len > 300 and p1Len + p2Len < 3822
+    
+    for _ in range(100):
+        p1Len, p2Len = getIFCAuxiliaryPrimesLegths(N, False)
+        assert p1Len > 300 and p2Len > 300 and p1Len + p2Len < 1901
+    
+    N = 15360
+    for _ in range(100):
+        p1Len, p2Len = getIFCAuxiliaryPrimesLegths(N, True)
+        assert p1Len > 510 and p2Len > 510 and p1Len + p2Len < 7661
+    
+    for _ in range(100):
+        p1Len, p2Len = getIFCAuxiliaryPrimesLegths(N, False)
+        assert p1Len > 510 and p2Len > 510 and p1Len + p2Len < 3820
