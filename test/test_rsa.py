@@ -1,7 +1,7 @@
-from ptCrypt.Util.keys import IFC_APPROVED_LENGTHS, millerRabinTestsForIFC
+from ptCrypt.Util.keys import IFC_APPROVED_LENGTHS, millerRabinTestsForIFC, getIFCSecurityLevel, getIFCAuxiliaryPrimesLegths
 from ptCrypt.Asymmetric import RSA
-from ptCrypt.Math.primality import millerRabin
-from datetime import datetime
+from ptCrypt.Math.primality import millerRabin, shaweTaylor
+from datetime import date, datetime
 
 
 def testGenerateProvablePrimes():
@@ -142,3 +142,67 @@ def testGenerateProvablePrimesWithConditions():
         assert millerRabin(p, testsCount) and millerRabin(q, testsCount)
     avgTime = sum(t) / len(t)
     print(N, avgTime)
+
+
+def testGenerateProbablePrimesWithAuxiliaryPrimes():
+    e = 65537
+
+    for N in IFC_APPROVED_LENGTHS[:3]:
+        testsCount = millerRabinTestsForIFC(N, False)[0]
+        t = []
+        p1Len, p2Len = getIFCAuxiliaryPrimesLegths(N, probablePrimes=False)
+        for _ in range(10):
+            while True:
+                start = datetime.now()
+                seed = RSA.getSeed(N)
+                res = shaweTaylor(p1Len, seed)
+                if not res["status"]: continue
+                p1 = res["prime"]
+                primeSeed = res["primeSeed"]
+
+                res = shaweTaylor(p2Len, primeSeed)
+                if not res["status"]: continue
+
+                p2 = res["prime"]
+                primeSeed = res["primeSeed"]
+
+                p = RSA.generateProbablePrimeWithAuxiliaryPrimes(p1, p2, N, e)
+                if not p: continue
+                end = datetime.now()
+                t.append((end - start).microseconds / 1000)
+
+                assert millerRabin(p[0], testsCount)
+                break
+        avg = sum(t) / len(t)
+        print(N, avg)
+
+
+def testGenerateProbablePrimesWithConditions():
+
+    e = 65537
+    for N in IFC_APPROVED_LENGTHS[0:3]:
+
+        testsCount = millerRabinTestsForIFC(N)[0]
+        for _ in range(10):
+            while True:
+                seed = RSA.getSeed(N)
+                res = RSA.generateProbablePrimesWithConditions(e, N, seed, probablePrimes = False)
+                if not res: continue
+
+                p, q = res
+
+                assert millerRabin(p, testsCount) and millerRabin(q, testsCount)
+                break
+
+    for N in IFC_APPROVED_LENGTHS[0:3]:
+
+        testsCount = millerRabinTestsForIFC(N)[0]
+        for _ in range(10):
+            while True:
+                res = RSA.generateProbablePrimesWithConditions(e, N, None, probablePrimes = True)
+                if not res: continue
+
+                p, q = res
+
+                assert millerRabin(p, testsCount) and millerRabin(q, testsCount)
+                break
