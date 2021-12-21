@@ -405,3 +405,91 @@ def generateProbablePrimeWithAuxiliaryPrimes(p1: int, p2: int, N: int, e: int) -
             i += 1
             if i >= 5 * (N // 2): return None
             Y = Y + (2 * p1 * p2)
+
+
+def encrypt(e: int, n: int, m: int) -> int:
+    """RSA encryption primitive by PKCS#1
+
+    Parameters:
+        e: int
+            RSA public exponent
+        
+        n: int
+            RSA modulus
+    
+        m: int
+            message to encrypt, must staisfy 0 <= m <= n - 1
+
+    Returns:
+        result: int
+            encrypted message m^e mod n, or None, if m < 0 or m > n - 1
+    """
+    if m < 0 or m > n - 1: return None
+    return pow(m, e, n)
+
+
+def decrypt(d: int, n: int, c: int) -> int:
+    """RSA decryption primitive by PKCS#1
+
+    Parameters:
+        d: int
+            RSA private exponent
+        
+        n: int
+            RSA modulus
+    
+        c: int
+            message to decrypt, must satisfy 0 <= c <= n - 1
+
+    Returs:
+        result: int
+            decrypted message c^d mod n, or None, if c < 0 or c > n - 1
+    """
+
+    if c < 0 or c > n - 1: return None
+    return pow(c, d, n)
+
+
+def sign(d: int, n: int, m: int) -> int:
+    """RSA signature primitive by PKCS#1
+
+    Parameters:
+        d: int
+            RSA private exponent
+
+        n: int
+            RSA modulus
+
+        m: int
+            messsage to sign
+    
+    Returns:
+        result: int
+            signature of the given message, or None, if m < 0 or m > n - 1
+    """
+
+    if m < 0 or m > n - 1: return None
+    return pow(m, d, n)
+
+
+def verify(e: int, n: int, s: int) -> int:
+    """RSA verify primitive by PKCS#1
+
+    Parameters:
+        e: int
+            RSA public exponent
+        
+        n: int
+            RSA modulus
+        
+        s: int
+            signature to verify
+    
+    Returns:
+        result: int
+            returns message decrypted with given public key. 
+            If returned message is equal to received message, then signature is correct
+    """
+
+    if s < 0 or s > n - 1: return None
+    return pow(s, e, n)
