@@ -1,4 +1,5 @@
 import random
+import hashlib
 import secrets
 from ptCrypt.Math import base, primality
 from ptCrypt.Util.keys import IFC_APPROVED_LENGTHS, getIFCSecurityLevel, millerRabinTestsForIFC, getIFCAuxiliaryPrimesLegths
@@ -493,3 +494,81 @@ def verify(e: int, n: int, s: int) -> int:
 
     if s < 0 or s > n - 1: return None
     return pow(s, e, n)
+
+
+def oaepEncrypt(e: int, n: int, message: bytes, label: bytes = b"", hashFunction: callable = hashlib.sha256) -> bytes:
+
+    nLength = len(base.intToBytes(n))
+    mLength = len(message)
+    lLength = len(label)
+    hLength = hashFunction().digest_size
+
+    # Step 1.b
+    if mLength > nLength - 2 * hLength - 2: return None
+
+    # Step 2
+    lHash = hashFunction(label).digest()  # 2.a
+    ps = b"\x00" * (nLength - mLength - 2 * hLength - 2)  # 2.b
+    db = lHash + ps + b"\x01" + message  # 2.c
+    seed = base.intToBytes(secrets.randbits(hLength * 8))  # 2.d
+    dbMask = MGF(seed, nLength - hLength - 1)  # 2.e
+    maskedDb = base.xor(db, dbMask)  # 2.f
+    seedMask = MGF(maskedDb, hLength)  # 2.g
+    maskedSeed = base.xor(seed, seedMask)  # 2.h
+    em = b"\x00" + maskedSeed + maskedDb  # 2.i
+
+    # Step 3
+    m = base.bytesToInt(em)
+    c = encrypt(e, n, m)
+    return base.intToBytes(c, nLength)
+
+
+def oaepDecrypt(d: int, n: int, ciphertext: bytes, label: bytes = b"", hashFunction: callable = hashlib.sha256) -> bytes:
+
+    nLength = base.byteLength(n)
+    hLength = hashFunction().digest_size
+
+    # Step 1
+    if len(ciphertext) != nLength: return None
+    if nLength < 2 * hLength + 2: return None
+
+    # Step 2
+    c = base.bytesToInt(ciphertext)
+    m = decrypt(d, n, c)
+    em = base.intToBytes(m, nLength)
+
+    # Step 3
+    lHash = hashFunction(label).digest()
+    Y = em[0]
+    maskedSeed = em[1:1 + hLength]
+    maskedDb = em[1 + hLength: nLength]
+    seedMask = MGF(maskedDb, hLength)
+    seed = base.xor(maskedSeed, seedMask)
+    dbMask = MGF(seed, nLength - hLength - 1)
+    db = base.xor(maskedDb, dbMask)
+
+    lHash_ = db[:hLength]
+    if lHash != lHash_: return None
+
+    index = hLength
+    while index < len(db):
+        if db[index] == b"\x01": break
+        if db[index] != b"\x00": return None
+    
+    return db[index + 1:]
+
+
+def MGF(seed: bytes, length: int, hashFunction: callable = hashlib.sha256) -> bytes:
+
+    hashLength = hashFunction().digest_size
+    if length > 2 ** 32 * hashLength: return None
+
+    t = b""
+
+    top = length // hashLength
+    if length % hashLength: top += 1
+    for counter in range(top):
+        c = base.intToBytes(counter, 4)
+        t = t + hashFunction(seed + c).digest()
+    
+    return t[:length]

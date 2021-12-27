@@ -193,7 +193,7 @@ def iroot(a, b):
     return min(d, e)
 
 
-def intToBytes(n: int, byteorder: str = "big") -> bytes:
+def intToBytes(n: int, length: int = 0, byteorder: str = "big") -> bytes:
     """Converts given integer number to bytes object
 
     Parameters:
@@ -208,7 +208,22 @@ def intToBytes(n: int, byteorder: str = "big") -> bytes:
             list of bytes of number n
     """
 
-    return n.to_bytes((n.bit_length() + 7) // 8, byteorder.lower())
+    nSize = (n.bit_length() + 7) // 8
+    if nSize > length: return n.to_bytes(nSize, byteorder.lower())
+    else: return n.to_bytes(length, byteorder.lower())
+
+
+def byteLength(n: int) -> int:
+    """Returns minimal amount of bytes to write given number
+
+    Parameters:
+        n: int
+
+    Returns:
+        result: int
+            minimal amount of bytes to write n
+    """
+    return (n.bit_length() + 7) // 8
 
 
 def bytesToInt(b: bytes, byteorder: str = "big") -> int:
@@ -226,6 +241,20 @@ def bytesToInt(b: bytes, byteorder: str = "big") -> int:
             bytes converted to int
     """
     return int.from_bytes(b, byteorder)
+
+
+def partition(b: bytes, length: int) -> list:
+    """Partitions given byte string into list of byte strings of requested length
+    """
+
+    partsCount = len(b) // length
+    if len(b) % length: partsCount += 1
+
+    result = []
+    for i in range(partsCount):
+        if i * length + length > len(b): result.append(b[i * length:])
+        else: result.append(b[i * length:i * length + length])
+    return result
 
 
 def xor(a: bytes, b: bytes, repeat: bool = False) -> bytes:

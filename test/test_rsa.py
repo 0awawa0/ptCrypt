@@ -1,3 +1,4 @@
+import os
 from ptCrypt.Util.keys import IFC_APPROVED_LENGTHS, millerRabinTestsForIFC, getIFCSecurityLevel, getIFCAuxiliaryPrimesLegths
 from ptCrypt.Asymmetric import RSA
 from ptCrypt.Math.primality import millerRabin, shaweTaylor
@@ -206,3 +207,23 @@ def testGenerateProbablePrimesWithConditions():
 
                 assert millerRabin(p, testsCount) and millerRabin(q, testsCount)
                 break
+
+
+def testOAEPEncryptionAndDecryption():
+
+    e = 65537
+    N = IFC_APPROVED_LENGTHS[0]
+
+    res = None
+    while not res:
+        seed = RSA.getSeed(N)
+        res = RSA.generateProbablePrimesWithConditions(e, N, seed)
+    
+    p, q = res
+    n = p * q
+    d = pow(e, -1, (p - 1) * (q - 1))
+    
+    m = os.urandom(16)
+    c = RSA.oaepEncrypt(e, n, m)
+    m_ = RSA.oaepDecrypt(d, n, c)
+    assert m == m_
