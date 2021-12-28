@@ -29,6 +29,8 @@ def getSeed(N: int) -> int:
 def generateProvablePrimes(e: int, N: int, seed: int) -> tuple:
     """Generates provably prime numbers p and q for RSA.
     The algorithm is specified by FIPS 186-4, Appendix B.3.2.2.
+    Note that FIPS 186-4 only allows N to be 2048 or 3072. This function, however,
+    allows any value from IFC_APPROVED_LENGTHS that is greater or equal to 2048.
 
     Parameters:
         e: int
@@ -50,7 +52,8 @@ def generateProvablePrimes(e: int, N: int, seed: int) -> tuple:
     """
 
     # Steps 1, 2, 3 and 4
-    if N != 2048 and N != 3072: return None
+    if N < 2048: return None
+    if N not in IFC_APPROVED_LENGTHS: return None
     if e <= 2**16 or e >= 2**256 or e % 2 == 0: return None
     securityStrength = getIFCSecurityLevel(N)
     if seed.bit_length() != 2 * securityStrength: return None
@@ -63,7 +66,7 @@ def generateProvablePrimes(e: int, N: int, seed: int) -> tuple:
     N1 = 1
     N2 = 1
     firstSeed = workingSeed
-    result = primality.ifcProvablePrime(L, N1, N2, firstSeed, e)
+    result = primality.ifcProvablePrime(L, e, firstSeed, N1, N2)
     if not result: return None
     p, p1, p2, pSeed = result
     workingSeed = pSeed
@@ -72,7 +75,7 @@ def generateProvablePrimes(e: int, N: int, seed: int) -> tuple:
     while True:
 
         # Step 7.1
-        result = primality.ifcProvablePrime(L, N1, N2, workingSeed, e)
+        result = primality.ifcProvablePrime(L, e, workingSeed, N1, N2)
         if not result: return None
         q, q1, q2, qSeed = result
 
@@ -92,6 +95,8 @@ def generateProvablePrimes(e: int, N: int, seed: int) -> tuple:
 def generateProbablePrimes(e: int, N: int) -> tuple:
     """Generates probably prime numbers p and q for RSA.
     The algorithm is specified by FIPS 186-4, Appendix B.3.3.
+    Note that FIPS 186-4 only allows N to be 2048 or 3072. This function, however,
+    allows any value from IFC_APPROVED_LENGTHS that is greater or equal to 2048.
 
     Parameters:
         e: int
@@ -109,7 +114,8 @@ def generateProbablePrimes(e: int, N: int) -> tuple:
     """
 
     # Steps 1, 2
-    if N != 2048 and N != 3072: return None
+    if N < 2048: return None
+    if N not in IFC_APPROVED_LENGTHS: return None
     if e<= 2**16 or e >= 2**256 or e % 2 == 0: return None
 
     testsCount = millerRabinTestsForIFC(N)[0]
@@ -160,6 +166,8 @@ def generateProbablePrimes(e: int, N: int) -> tuple:
 def geneareteProvablePrimesWithConditions(e: int, N: int, seed: int) -> tuple:
     """Provable primes generation method which satisfies security conditions from FIPS 186-4.
     Generation algorithm is specified by FIPS 186-4, Appendix B.3.4.
+    Note that FIPS 186-4 only allows N to be 1024, 2048 or 3072. This function, however,
+    allows any value from IFC_APPROVED_LENGTHS.
 
     Parameters:
         e: int
@@ -179,7 +187,7 @@ def geneareteProvablePrimesWithConditions(e: int, N: int, seed: int) -> tuple:
     """
 
     # Steps 1, 2
-    if N != 1024 and N != 2048 and N != 3072: return None
+    if N not in IFC_APPROVED_LENGTHS: return None
     if e <= 2 ** 16 or e >= 2 ** 256: return None
 
     # Steps 3, 4
@@ -221,6 +229,8 @@ def generateProbablePrimesWithConditions(e: int, N: int, seed: int, probablePrim
     """Generates probable primes p and q for RSA by algorithms specified in FIPS 186-4, Appendix B.3.5 and B.3.6.
     This function combines two algorithms, set probablePrimes to False to use algorirthm from Appendix B.3.5. and
     to True to use algorithm from Appendix B.3.6.
+    Note that FIPS 186-4 only allows N to be 1024, 2048 or 3072. This function, however,
+    allows any value from IFC_APPROVED_LENGTHS.
 
     Parameters:
         e: int
@@ -245,7 +255,7 @@ def generateProbablePrimesWithConditions(e: int, N: int, seed: int, probablePrim
     """
 
     # Steps 1, 2
-    if N != 1024 and N != 2048 and N != 3072: return None
+    if N not in IFC_APPROVED_LENGTHS: return None
     if e <= 2 ** 16 or e >= 2 ** 256: return None
 
     testsCount = millerRabinTestsForIFC(N)[0]
@@ -497,6 +507,32 @@ def verify(e: int, n: int, s: int) -> int:
 
 
 def oaepEncrypt(e: int, n: int, message: bytes, label: bytes = b"", hashFunction: callable = hashlib.sha256) -> bytes:
+    """RSA-OAEP encryption function specified by PKCS#1, Section 7.1.1.
+
+    Parameters:
+        e: int
+            RSA public exponent
+        
+        n: int
+            RSA modulus
+        
+        message: bytes
+            message to encrypt
+        
+        label: bytes
+            optional additional label to add. By default - empty string
+        
+        hashFunction: callable
+            hash function to use. Must conform to hashlib protocols, by default hashlib.sha256 is used
+    
+    Returns:
+        result: bytes
+            Encrypted message. 
+            Might be equal to None if mLength > nLength - 2 * hashLength - 2,
+            where mLength - length of the message in bytes,
+            nLength - lenght of modulus in bytes,
+            hashLength - lenght of hash output in bytes
+    """
 
     nLength = len(base.intToBytes(n))
     mLength = len(message)
@@ -510,7 +546,7 @@ def oaepEncrypt(e: int, n: int, message: bytes, label: bytes = b"", hashFunction
     lHash = hashFunction(label).digest()  # 2.a
     ps = b"\x00" * (nLength - mLength - 2 * hLength - 2)  # 2.b
     db = lHash + ps + b"\x01" + message  # 2.c
-    seed = base.intToBytes(secrets.randbits(hLength * 8))  # 2.d
+    seed = base.getRandomBytes(hLength)  # 2.d
     dbMask = MGF(seed, nLength - hLength - 1)  # 2.e
     maskedDb = base.xor(db, dbMask)  # 2.f
     seedMask = MGF(maskedDb, hLength)  # 2.g
@@ -520,10 +556,35 @@ def oaepEncrypt(e: int, n: int, message: bytes, label: bytes = b"", hashFunction
     # Step 3
     m = base.bytesToInt(em)
     c = encrypt(e, n, m)
+
+    # Step 4
     return base.intToBytes(c, nLength)
 
 
 def oaepDecrypt(d: int, n: int, ciphertext: bytes, label: bytes = b"", hashFunction: callable = hashlib.sha256) -> bytes:
+    """RSA-OAEP decryption according to PKCS#1, Section 7.1.2
+
+    Parameters:
+        d: int
+            RSA private exponent
+        
+        n: int
+            RSA modulus
+        
+        ciphertext: bytes
+            encrypted message
+        
+        label: bytes
+            optional label. By default empty string is used
+        
+        hashFunction: callable
+            hash function used for encryption. Must conform to hashlib protocols. By default hashlib.sha256 is used
+    
+    Returns:
+        result: bytes
+            Decrypted plaintext.
+            Might return None if some paramters or ciphertext are non appropriate to OAEP scheme.
+    """
 
     nLength = base.byteLength(n)
     hLength = hashFunction().digest_size
@@ -533,42 +594,70 @@ def oaepDecrypt(d: int, n: int, ciphertext: bytes, label: bytes = b"", hashFunct
     if nLength < 2 * hLength + 2: return None
 
     # Step 2
-    c = base.bytesToInt(ciphertext)
-    m = decrypt(d, n, c)
-    em = base.intToBytes(m, nLength)
+    c = base.bytesToInt(ciphertext)  # 2.a
+    m = decrypt(d, n, c)  # 2.b
+    em = base.intToBytes(m, nLength)  # 2.c
 
     # Step 3
-    lHash = hashFunction(label).digest()
+    lHash = hashFunction(label).digest() # 3.a
+    
+    # Step 3.b
     Y = em[0]
     maskedSeed = em[1:1 + hLength]
     maskedDb = em[1 + hLength: nLength]
+
+    # Steps 3.c - 3.f
     seedMask = MGF(maskedDb, hLength)
     seed = base.xor(maskedSeed, seedMask)
     dbMask = MGF(seed, nLength - hLength - 1)
     db = base.xor(maskedDb, dbMask)
 
+    # Step 3.g
     lHash_ = db[:hLength]
     if lHash != lHash_: return None
 
     index = hLength
     while index < len(db):
-        if db[index] == b"\x01": break
-        if db[index] != b"\x00": return None
+        if db[index] == 1: break
+        if db[index] != 0: return None
+        index += 1
     
+    # Step 4
     return db[index + 1:]
 
 
 def MGF(seed: bytes, length: int, hashFunction: callable = hashlib.sha256) -> bytes:
+    """Mask generation function specified by PKCS#1, Appendix B.2.1
+
+    Parameters:
+        seed: bytes
+            generations seed
+        
+        length: int
+            required mask length
+        
+        hashFunction: callable
+            hash function to use. Must conform to hashlib protocols. By default hashlib.sha256 is used
+    
+    Returns:
+        result: bytes
+            generated mask
+    """
 
     hashLength = hashFunction().digest_size
+
+    # Step 1
     if length > 2 ** 32 * hashLength: return None
 
+    # Step 2
     t = b""
 
+    # Step 3
     top = length // hashLength
     if length % hashLength: top += 1
     for counter in range(top):
-        c = base.intToBytes(counter, 4)
-        t = t + hashFunction(seed + c).digest()
+        c = base.intToBytes(counter, 4)  # 3.a
+        t = t + hashFunction(seed + c).digest()  # 3.b
     
+    # Step 4
     return t[:length]

@@ -28,6 +28,7 @@ def measurePrimalityTestTime():
 
 
 def testLucas():
+    print("testLucas")
 
     count = 0
     ms = []
@@ -51,6 +52,7 @@ def testLucas():
 
 
 def testShaweTaylor():
+    print("testShaweTaylor")
 
     length = 1024
 
@@ -77,6 +79,7 @@ def testShaweTaylor():
 
 
 def testPollardFactor():
+    print("testPollardFactor")
 
     primeLength = 38
     i = 7
@@ -109,6 +112,8 @@ def testPollardFactor():
 
 
 def testLenstraFactor():
+    print("testLenstraFactor")
+
     primeLength = 35
     i = 7
     p = primality.shaweTaylor(primeLength, i)["prime"]
@@ -133,14 +138,18 @@ def testLenstraFactor():
 
 
 def testIfcProvablePrime():
-
+    print("testIfcProvablePrime")
     
     N = IFC_APPROVED_LENGTHS[0]
     N1 = 1
     N2 = 1
-    seed = getSeed(N)
-    p, p1, p2, pSeed = primality.ifcProvablePrime(N // 2, N1, N2, seed, 65537)
 
+    res = None
+    while res == None:
+        seed = getSeed(N)
+        res = primality.ifcProvablePrime(N // 2, 65537, seed, N1, N2)
+
+    p, p1, p2, pSeed = res
     assert primality.millerRabin(p, 27)
     print(p)
     print(p1)

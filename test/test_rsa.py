@@ -1,4 +1,7 @@
+from hashlib import sha256
 import os
+import random
+from ptCrypt.Math import base
 from ptCrypt.Util.keys import IFC_APPROVED_LENGTHS, millerRabinTestsForIFC, getIFCSecurityLevel, getIFCAuxiliaryPrimesLegths
 from ptCrypt.Asymmetric import RSA
 from ptCrypt.Math.primality import millerRabin, shaweTaylor
@@ -6,13 +9,14 @@ from datetime import date, datetime
 
 
 def testGenerateProvablePrimes():
+    print("testGenerateProvablePrimes")
 
     e = 65537
     N = 2048
     testsCount = millerRabinTestsForIFC(N)[0]
     
     t = []
-    for _ in range(10):
+    for _ in range(1):
         start = datetime.now()
         seed = RSA.getSeed(N)
         res = None
@@ -30,7 +34,7 @@ def testGenerateProvablePrimes():
     testsCount = millerRabinTestsForIFC(N)[0]
     
     t = []
-    for _ in range(10):
+    for _ in range(1):
         start = datetime.now()
         seed = RSA.getSeed(N)
         res = None
@@ -47,6 +51,7 @@ def testGenerateProvablePrimes():
 
 
 def testGenerateProbablePrimes():
+    print("testGenerateProbablePrimes")
 
     e = 65537
     N = 2048
@@ -54,7 +59,7 @@ def testGenerateProbablePrimes():
     print("Test count: ", testsCount)
 
     t = []
-    for _ in range(10):
+    for _ in range(1):
         start = datetime.now()
         res = RSA.generateProbablePrimes(e, N)
         assert res
@@ -70,7 +75,7 @@ def testGenerateProbablePrimes():
     print("Test count: ", testsCount)
 
     t = []
-    for _ in range(10):
+    for _ in range(1):
         start = datetime.now()
         res = RSA.generateProbablePrimes(e, N)
         assert res
@@ -84,13 +89,14 @@ def testGenerateProbablePrimes():
 
 
 def testGenerateProvablePrimesWithConditions():
+    print("testGenerateProvablePrimesWithConditions")
 
     e = 65537
     N = 1024
     testsCount = millerRabinTestsForIFC(N)[0]
     
     t = []
-    for _ in range(10):
+    for _ in range(1):
         start = datetime.now()
         seed = RSA.getSeed(N)
         res = None
@@ -110,7 +116,7 @@ def testGenerateProvablePrimesWithConditions():
     testsCount = millerRabinTestsForIFC(N)[0]
     
     t = []
-    for _ in range(10):
+    for _ in range(1):
         start = datetime.now()
         seed = RSA.getSeed(N)
         res = None
@@ -130,7 +136,7 @@ def testGenerateProvablePrimesWithConditions():
     testsCount = millerRabinTestsForIFC(N)[0]
     
     t = []
-    for _ in range(10):
+    for _ in range(1):
         start = datetime.now()
         seed = RSA.getSeed(N)
         res = None
@@ -146,13 +152,15 @@ def testGenerateProvablePrimesWithConditions():
 
 
 def testGenerateProbablePrimesWithAuxiliaryPrimes():
+    print("testGenerateProbablePrimesWithAuxiliaryPrimes")
+
     e = 65537
 
     for N in IFC_APPROVED_LENGTHS[:3]:
         testsCount = millerRabinTestsForIFC(N, False)[0]
         t = []
         p1Len, p2Len = getIFCAuxiliaryPrimesLegths(N, probablePrimes=False)
-        for _ in range(10):
+        for _ in range(1):
             while True:
                 start = datetime.now()
                 seed = RSA.getSeed(N)
@@ -179,12 +187,13 @@ def testGenerateProbablePrimesWithAuxiliaryPrimes():
 
 
 def testGenerateProbablePrimesWithConditions():
+    print("testGenerateProbablePrimesWithConditions")
 
     e = 65537
     for N in IFC_APPROVED_LENGTHS[0:3]:
 
         testsCount = millerRabinTestsForIFC(N)[0]
-        for _ in range(10):
+        for _ in range(1):
             while True:
                 seed = RSA.getSeed(N)
                 res = RSA.generateProbablePrimesWithConditions(e, N, seed, probablePrimes = False)
@@ -198,7 +207,7 @@ def testGenerateProbablePrimesWithConditions():
     for N in IFC_APPROVED_LENGTHS[0:3]:
 
         testsCount = millerRabinTestsForIFC(N)[0]
-        for _ in range(10):
+        for _ in range(1):
             while True:
                 res = RSA.generateProbablePrimesWithConditions(e, N, None, probablePrimes = True)
                 if not res: continue
@@ -210,20 +219,26 @@ def testGenerateProbablePrimesWithConditions():
 
 
 def testOAEPEncryptionAndDecryption():
+    print("testOAEPEncryptionAndDecryption")
 
     e = 65537
-    N = IFC_APPROVED_LENGTHS[0]
 
-    res = None
-    while not res:
-        seed = RSA.getSeed(N)
-        res = RSA.generateProbablePrimesWithConditions(e, N, seed)
+    for N in IFC_APPROVED_LENGTHS[:1]:
+        print(N)
+
+        for _ in range(100):
+            res = None
+            while res == None:
+                seed = RSA.getSeed(N)
+                res = RSA.generateProbablePrimesWithConditions(e, N, seed)
     
-    p, q = res
-    n = p * q
-    d = pow(e, -1, (p - 1) * (q - 1))
+            p, q = res
+            n = p * q
+            d = pow(e, -1, (p - 1) * (q - 1))
     
-    m = os.urandom(16)
-    c = RSA.oaepEncrypt(e, n, m)
-    m_ = RSA.oaepDecrypt(d, n, c)
-    assert m == m_
+            maxLength = base.byteLength(n) - 2 * sha256().digest_size - 2
+            m = os.urandom(maxLength)
+            c = RSA.oaepEncrypt(e, n, m)
+            m_ = RSA.oaepDecrypt(d, n, c)
+            if m != m_:
+                print(m)
