@@ -242,3 +242,28 @@ def testOAEPEncryptionAndDecryption():
             m_ = RSA.oaepDecrypt(d, n, c)
             if m != m_:
                 print(m)
+
+
+def testPKCS1V15EncryptionAndDecryption():
+    print("testPkcs1V15EncryptionAndDecryption")
+
+    e = 65537
+    for N in IFC_APPROVED_LENGTHS[:1]:
+        
+        for _ in range(100):
+            res = None
+            while res == None:
+                seed = RSA.getSeed(N)
+                res = RSA.generateProbablePrimesWithConditions(e, N, seed)
+        
+            p, q = res
+            n = p * q
+            d = pow(e, -1, (p - 1) * (q - 1))
+
+            maxLength = base.byteLength(n) - 11
+            m = os.urandom(maxLength)
+            c = RSA.pkcs1v15Encrypt(e, n, m)
+            m_ = RSA.pkcs1v15Decrypt(d, n, c)
+            if m != m_:
+                print(m_)
+                print(m)

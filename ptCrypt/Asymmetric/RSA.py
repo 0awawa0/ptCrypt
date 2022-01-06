@@ -661,3 +661,90 @@ def MGF(seed: bytes, length: int, hashFunction: callable = hashlib.sha256) -> by
     
     # Step 4
     return t[:length]
+
+
+def pkcs1v15Encrypt(e: int, n: int, message: bytes) -> bytes:
+    """RSA-PKCS1v1.5 encryption function specified by PKC#1, Section 7.2.1
+    This encryption scheme is not recommended for new applications, check oaepEncrypt instead.
+
+    Parameters:
+        e: int
+            RSA public exponent
+        
+        n: int
+            RSA modulus
+        
+        message: bytes
+            message to encrypt
+    
+    Returns:
+        result: bytes
+            Encrypted message.
+            Might be equal to None if mLength > nLength - 11,
+            where mLength - length of the message in bytes,
+            nLength - length of modulus in bytes
+    """
+
+    nLength = base.byteLength(n)
+    mLength = len(message)
+
+    # Step 1
+    if mLength > nLength - 11: return None
+
+    # Step 2
+    ps = base.getRandomBytes(nLength - mLength - 3, exclude=set([0]))  # 2.a
+    em = b"\x00" + b"\x02" + ps + b"\x00" + message  # 2.b
+
+    # Step 3
+    m = base.bytesToInt(em)  # 3.a
+    c = encrypt(e, n, m)  # 3.b
+
+    # Steps 3.c and 4
+    return base.intToBytes(c)
+
+
+def pkcs1v15Decrypt(d: int, n: int, ciphertext: bytes) -> bytes:
+    """RSA-PKCS1v1.5 decryption according to PKCS#1, Section 7.2.2
+
+    Parameters:
+        d: int
+            RSA private exponent
+        
+        n: int
+            RSA modulus
+        
+        ciphertext: bytes
+            encrypted message
+        
+    Returns:
+        result: bytes
+            Decrypted plaintext.
+            Might return None if some parameters are incorrect or ciphertext is corrupted.
+    """
+
+    nLength = base.byteLength(n)
+    cLength = len(ciphertext)
+
+    # Step 1
+    if cLength < nLength - 1 or nLength < 11: return None
+
+    # Step 2
+    c = base.bytesToInt(ciphertext)  # 2.a
+    m = decrypt(d, n, c)  # 2.b
+
+    if m == None: return None
+
+    em = base.intToBytes(m)  # 2.c
+
+    # Step 3
+    if em[0] != 2: return None
+
+    i = 2
+    while i < len(em) and em[i] != 0: i += 1
+    if i >= len(em): return None
+    if i < 9: return None
+
+    message = em[i + 1:]
+
+    # Step 4
+    return message
