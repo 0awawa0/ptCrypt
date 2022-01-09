@@ -748,3 +748,71 @@ def pkcs1v15Decrypt(d: int, n: int, ciphertext: bytes) -> bytes:
 
     # Step 4
     return message
+
+
+def emsaPssEncode(message: bytes, emBits: int, saltLength: int, hashFunction: callable) -> bytes:
+
+    emLength = emBits // 8
+    if emBits % 8: emLength += 1
+
+    mHash = hashFunction(message).digest()
+    hashLength = len(mHash)
+
+    if emLength < hashLength + saltLength + 2: return None
+
+    salt = base.getRandomBytes(saltLength)
+    M = b"\x00" * 8 + mHash + salt
+    H = hashFunction(M).digest()
+
+    ps = b"\x00" * (emLength - hashLength - saltLength - 2)
+    db = ps + b"\x01" + salt
+
+    dbMask = MGF(H, emLength - hashLength - 1, hashFunction)
+    maskedDb = base.xor(db, dbMask)
+
+    bitMask = 0xff
+    for _ in range(8 * emLength - emBits): bitMask >>= 1
+
+    maskedDb = bytes([maskedDb[0] & bitMask]) + maskedDb[1:]
+
+    em = maskedDb + H + b"\xbc"
+
+    return em
+
+
+def emsaPssVerify(message: bytes, encodedMessage: bytes, emBits: int, saltLength: int, hashFunction: callable) -> bool:
+
+    emLength = len(encodedMessage)
+    mHash = hashFunction(message).digest()
+    hashLength = len(mHash)
+
+    if emLength < hashLength + saltLength + 2: return False
+
+    if encodedMessage[-1] != 0xbc: return False
+
+    maskedDb = encodedMessage[:emLength - hashLength - 1]
+    H = encodedMessage[emLength - hashLength - 1:emLength - 1]
+
+    bitMask = 0xff
+    for _ in (8 * emLength - emBits): bitMask >>= 1
+    bitMask = ~bitMask
+
+    if bitMask & maskedDb[0] != 0: return False
+
+    dbMask = MGF(H, emLength - hashLength - 1, hashFunction)
+
+    db = base.xor(maskedDb, dbMask)
+
+    bitMask = ~bitMask
+    db = bytes([db[0] & bitMask]) + db[1:]
+    
+    for i in range(emLength - hashLength - saltLength - 2):
+        if db[i] != 0x00: return False
+    
+    if db[emLength - hashLength - saltLength - 1] != 1: return False
+    
+    salt = db[-saltLength:]
+    M = b"\x00" * 8 + mHash + salt
+    H_ = hashFunction(M)
+
+    return H == H_
