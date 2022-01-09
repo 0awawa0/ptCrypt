@@ -750,7 +750,7 @@ def pkcs1v15Decrypt(d: int, n: int, ciphertext: bytes) -> bytes:
     return message
 
 
-def emsaPssEncode(message: bytes, emBits: int, saltLength: int, hashFunction: callable) -> bytes:
+def emsaPssEncode(message: bytes, emBits: int, saltLength: int, hashFunction: callable = hashlib.sha256) -> bytes:
 
     emLength = emBits // 8
     if emBits % 8: emLength += 1
@@ -780,24 +780,33 @@ def emsaPssEncode(message: bytes, emBits: int, saltLength: int, hashFunction: ca
     return em
 
 
-def emsaPssVerify(message: bytes, encodedMessage: bytes, emBits: int, saltLength: int, hashFunction: callable) -> bool:
+def emsaPssVerify(message: bytes, encodedMessage: bytes, emBits: int, saltLength: int, hashFunction: callable = hashlib.sha256) -> bool:
 
     emLength = len(encodedMessage)
     mHash = hashFunction(message).digest()
     hashLength = len(mHash)
 
-    if emLength < hashLength + saltLength + 2: return False
+    if emLength < hashLength + saltLength + 2: 
+        print(1)
+        print(emLength)
+        return False
 
-    if encodedMessage[-1] != 0xbc: return False
+    if encodedMessage[-1] != 0xbc: 
+        print(2)
+        print(encodedMessage[-1])
+        return False
 
     maskedDb = encodedMessage[:emLength - hashLength - 1]
     H = encodedMessage[emLength - hashLength - 1:emLength - 1]
 
     bitMask = 0xff
-    for _ in (8 * emLength - emBits): bitMask >>= 1
+    for _ in range(8 * emLength - emBits): bitMask >>= 1
     bitMask = ~bitMask
 
-    if bitMask & maskedDb[0] != 0: return False
+    if bitMask & maskedDb[0] != 0: 
+        print(3)
+        print(bitMask & maskedDb[0])
+        return False
 
     dbMask = MGF(H, emLength - hashLength - 1, hashFunction)
 
@@ -807,9 +816,16 @@ def emsaPssVerify(message: bytes, encodedMessage: bytes, emBits: int, saltLength
     db = bytes([db[0] & bitMask]) + db[1:]
     
     for i in range(emLength - hashLength - saltLength - 2):
-        if db[i] != 0x00: return False
+        if db[i] != 0x00: 
+            print(4)
+            print(db)
+            return False
     
-    if db[emLength - hashLength - saltLength - 1] != 1: return False
+    if db[emLength - hashLength - saltLength - 1] != 1: 
+        print(5)
+        print(db)
+        print(hex(db[emLength - hashLength - saltLength]))
+        return False
     
     salt = db[-saltLength:]
     M = b"\x00" * 8 + mHash + salt

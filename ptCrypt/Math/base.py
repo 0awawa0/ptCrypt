@@ -291,7 +291,7 @@ def xor(a: bytes, b: bytes, repeat: bool = False) -> bytes:
     return result
 
 
-def getRandomBytes(count: int, exclude: set) -> bytes:
+def getRandomBytes(count: int, exclude: set = set()) -> bytes:
     """Returns random byte string with required length
     Bytes are generated with secrets module, so returned value should be
     appropriate for cryptographic usage.
