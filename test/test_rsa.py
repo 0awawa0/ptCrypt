@@ -273,7 +273,8 @@ def testEMSAPSSEncodeAndVerify():
     print("testEMSA-PSSEncodeAndVerify")
 
     for _ in range(100):
-        message = base.getRandomBytes(100)
+        messageLength = random.randint(10, 100)
+        message = base.getRandomBytes(messageLength)
         em = RSA.emsaPssEncode(message, len(message) * 128, 16)
         assert em != None
         assert RSA.emsaPssVerify(message, em, len(message) * 128, 16)

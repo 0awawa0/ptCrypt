@@ -750,85 +750,139 @@ def pkcs1v15Decrypt(d: int, n: int, ciphertext: bytes) -> bytes:
     return message
 
 
-def emsaPssEncode(message: bytes, emBits: int, saltLength: int, hashFunction: callable = hashlib.sha256) -> bytes:
+def emsaPssEncode(
+    message: bytes,
+    emBits: int, 
+    saltLength: int, 
+    hashFunction: callable = hashlib.sha256
+) -> bytes:
+    """EMSA-PSS Encode method implementation by PKCS#1, Section 9.1.1
+
+    Parameters:
+        message: bytes
+            message to encode
+        
+        emBits: int
+            bit length of em
+        
+        saltLength: int
+            length of salt
+        
+        hashFunction: callable
+            hash function to use. Must conform to hashlib protocols. 
+            By default hashlib.sha256 is used
+    
+    Returns:
+        result: bytes
+            Encoded message. Might return None if parameters are incorrect (see PKCS#1)
+    """
 
     emLength = emBits // 8
     if emBits % 8: emLength += 1
 
+    # Step 2
     mHash = hashFunction(message).digest()
     hashLength = len(mHash)
 
+    # Step 3
     if emLength < hashLength + saltLength + 2: return None
 
+    # Step 4
     salt = base.getRandomBytes(saltLength)
+
+    # Steps 5, 6
     M = b"\x00" * 8 + mHash + salt
     H = hashFunction(M).digest()
 
+    # Steps 7, 8
     ps = b"\x00" * (emLength - hashLength - saltLength - 2)
     db = ps + b"\x01" + salt
 
+    # Steps 9, 10
     dbMask = MGF(H, emLength - hashLength - 1, hashFunction)
     maskedDb = base.xor(db, dbMask)
 
+    # Step 11
     bitMask = 0xff
     for _ in range(8 * emLength - emBits): bitMask >>= 1
 
     maskedDb = bytes([maskedDb[0] & bitMask]) + maskedDb[1:]
 
+    # Steps 12, 13
     em = maskedDb + H + b"\xbc"
-
     return em
 
 
-def emsaPssVerify(message: bytes, encodedMessage: bytes, emBits: int, saltLength: int, hashFunction: callable = hashlib.sha256) -> bool:
+def emsaPssVerify(
+    message: bytes,
+    encodedMessage: bytes, 
+    emBits: int, 
+    saltLength: int, 
+    hashFunction: callable = hashlib.sha256
+) -> bool:
+    """EMSA-PSS Verification method implementation by PKCS#1, Section 9.1.2
+
+    Parameters:
+        message: bytes
+            original message
+        
+        encodedMessage: bytes
+            encoded message to verify
+        
+        emBits: int
+            intended encoded message bit length
+        
+        saltLength: int
+            length of salt
+        
+        hashFunction: callable
+            hash function used to encode message. Must conform to hashlib protocols.
+            By default hashlib.sha256 is used.
+    
+    Returns:
+        result: bool
+            True if message was encoded by emsaPssEncode method, False otherwise.
+    """
 
     emLength = len(encodedMessage)
+
+    # Step 2
     mHash = hashFunction(message).digest()
     hashLength = len(mHash)
 
-    if emLength < hashLength + saltLength + 2: 
-        print(1)
-        print(emLength)
-        return False
+    # Step 3
+    if emLength < hashLength + saltLength + 2: return False
 
-    if encodedMessage[-1] != 0xbc: 
-        print(2)
-        print(encodedMessage[-1])
-        return False
+    # Step 4
+    if encodedMessage[-1] != 0xbc: return False
 
+    # Step 5
     maskedDb = encodedMessage[:emLength - hashLength - 1]
     H = encodedMessage[emLength - hashLength - 1:emLength - 1]
 
+    # Step 6
     bitMask = 0xff
     for _ in range(8 * emLength - emBits): bitMask >>= 1
     bitMask = ~bitMask
 
-    if bitMask & maskedDb[0] != 0: 
-        print(3)
-        print(bitMask & maskedDb[0])
-        return False
+    if bitMask & maskedDb[0] != 0: return False
 
+    # Steps 7, 8
     dbMask = MGF(H, emLength - hashLength - 1, hashFunction)
-
     db = base.xor(maskedDb, dbMask)
 
+    # Step 9
     bitMask = ~bitMask
     db = bytes([db[0] & bitMask]) + db[1:]
     
+    # Step 10
     for i in range(emLength - hashLength - saltLength - 2):
-        if db[i] != 0x00: 
-            print(4)
-            print(db)
-            return False
+        if db[i] != 0x00: return False
     
-    if db[emLength - hashLength - saltLength - 1] != 1: 
-        print(5)
-        print(db)
-        print(hex(db[emLength - hashLength - saltLength]))
-        return False
+    if db[emLength - hashLength - saltLength - 2] != 1: return False
     
+    # Steps 11, 12, 13, 14
     salt = db[-saltLength:]
     M = b"\x00" * 8 + mHash + salt
-    H_ = hashFunction(M)
-
+    H_ = hashFunction(M).digest()
     return H == H_
