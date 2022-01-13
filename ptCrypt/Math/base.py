@@ -36,8 +36,8 @@ def egcd(n: int, m: int) -> dict:
             second number
 
     Returns: 
-        result: dict
-            dictionary with specified keys:
+        result: tuple
+            tuple of values (reminder, a, b), where
             reminder: int
                 greatest common divisor
             a, b: int
@@ -314,3 +314,46 @@ def getRandomBytes(count: int, exclude: set = set()) -> bytes:
         if value not in exclude:
             result += intToBytes(secrets.randbits(8))
     return result
+
+
+def crt(coeffs: list, mods: list) -> int:
+    """Chinese remainder theorem implementation for finding X in the system
+
+    X = C1 (mod M1)
+    X = C2 (mod M2)
+    ...
+    X = Cn (mod Mn)
+
+    Parameters:
+        coeffs: int
+            list of parameters C1, C2,..., Cn
+        
+        mods: int
+            list of modules M1, M2, ..., Mn
+    
+    Returns:
+        result: int
+            value of X such that X = C1 (mod M1), X = C2 (mod M2),..., X = Cn (mod Mn)
+
+            The function may return None if either coeffs or mods (or both) is empty, 
+            or if there is two modules M1 and M2 in modules such that gcd(M1, M2) != 1
+    """
+
+    count = min(len(coeffs), len(mods))
+    if count == 0: return None
+
+    currX = coeffs[0]
+    currMod = mods[0]
+
+    for i in range(1, count):
+        newMod = mods[i]
+        if gcd(currMod, newMod) != 1: return None
+
+        y = (coeffs[i] - currX) % newMod
+        inv = egcd(currMod, newMod)[1]
+        y = (inv * y) % newMod
+
+        currX = currX + currMod * y
+        currMod *= newMod
+    
+    return currX % currMod

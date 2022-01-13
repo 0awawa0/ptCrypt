@@ -57,3 +57,25 @@ def testIntToBytes():
         value, size, byteorder = cases[i]
         result = base.intToBytes(value, size, byteorder)
         assert result == checks[i]
+
+
+def testCrt():
+
+    cases = [
+        ([3, 4], [7, 9]),
+        ([13, 41], [71, 97]),
+        ([4, 5, 11], [7, 8, 15]),
+        ([2, 3, 4], [3, 7, 16])
+    ]
+
+    checks = [
+        31,
+        5764,
+        221,
+        164
+    ]
+
+    for i in range(len(cases)):
+        coeffs, mods = cases[i]
+        result = base.crt(coeffs, mods)
+        assert result == checks[i]
