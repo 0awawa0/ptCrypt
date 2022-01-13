@@ -1,3 +1,4 @@
+import secrets
 from ptCrypt.Math import base, primality
 from datetime import datetime
 import random
@@ -60,22 +61,34 @@ def testIntToBytes():
 
 
 def testCrt():
+    print("testCrt")
 
-    cases = [
-        ([3, 4], [7, 9]),
-        ([13, 41], [71, 97]),
-        ([4, 5, 11], [7, 8, 15]),
-        ([2, 3, 4], [3, 7, 16])
-    ]
+    numbersCount = 4
+    numbersSize = 1024
+    print(f"\tUsing {numbersCount} numbers of size {numbersSize * 8} bits (modulus size {numbersCount * numbersSize * 8} bits)")
 
-    checks = [
-        31,
-        5764,
-        221,
-        164
-    ]
+    times = []
+    for _ in range(100):
+        modulus = base.bytesToInt(base.getRandomBytes(numbersSize))
+        mods = [modulus]
+        for _ in range(1, numbersCount):
+            number = base.bytesToInt(base.getRandomBytes(numbersSize))
+            while base.gcd(number, modulus) != 1:
+                number = base.bytesToInt(base.getRandomBytes(numbersSize))
+            
+            mods.append(number)
+            modulus *= number
+        
+        solution = base.bytesToInt(base.getRandomBytes(base.byteLength(modulus))) % modulus
 
-    for i in range(len(cases)):
-        coeffs, mods = cases[i]
-        result = base.crt(coeffs, mods)
-        assert result == checks[i]
+        coeffs = []
+        for number in mods:
+            coeffs.append(solution % number)
+        
+        start = datetime.now()
+        crtResult = base.crt(coeffs, mods)
+        end = datetime.now()
+        times.append((end - start).microseconds)
+        assert solution == crtResult
+
+    print(f"\tAverage time: {sum(times) / len(times)} microseconds")
