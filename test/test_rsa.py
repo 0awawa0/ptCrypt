@@ -278,3 +278,25 @@ def testEMSAPSSEncodeAndVerify():
         em = RSA.emsaPssEncode(message, len(message) * 128, 16)
         assert em != None
         assert RSA.emsaPssVerify(message, em, len(message) * 128, 16)
+
+
+def testRSASSASignAndVerify():
+    print("testRSASSASignAndVerify")
+
+    e = 65537
+    N = IFC_APPROVED_LENGTHS[0]
+    res = None
+    while res == None:
+        seed = RSA.getSeed(N)
+        res = RSA.generateProbablePrimesWithConditions(e, N, seed, True)
+    
+    p, q = res
+    f = (p - 1) * (q - 1)
+    d = pow(e, -1, f)
+    n = p * q
+
+    for _ in range(1000):
+        messageLenngth = base.byteLength(n)
+        message = base.getRandomBytes(messageLenngth)
+        signature = RSA.ssaPssSign(d, n, message)
+        assert RSA.ssaPssVerify(e, n, message, signature)

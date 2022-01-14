@@ -1,6 +1,7 @@
 import random
 import hashlib
 import secrets
+from sqlite3 import SQLITE_ALTER_TABLE
 from ptCrypt.Math import base, primality
 from ptCrypt.Util.keys import IFC_APPROVED_LENGTHS, getIFCSecurityLevel, millerRabinTestsForIFC, getIFCAuxiliaryPrimesLegths
 from secrets import randbits
@@ -886,3 +887,81 @@ def emsaPssVerify(
     M = b"\x00" * 8 + mHash + salt
     H_ = hashFunction(M).digest()
     return H == H_
+
+
+def ssaPssSign(d: int, n: int, message: bytes, hashFunction: callable = hashlib.sha256) -> bytes:
+    """RSASSA-PSS signature generation implementation by PKCS#1, Section 8.1.1
+
+    Parameters:
+        d: int
+            RSA private exponent
+        
+        n: int
+            RSA modulus
+        
+        message: bytes
+            message to sign
+    
+        hashFunction: callable
+            Hash function to use for signature generation. Must conform to hashlib protocols. 
+            By default hashlib.sha256 is used.
+    Returns:
+        result: bytes
+            RSASSA-PSS signature
+    """
+
+    modBits = n.bit_length()
+
+    hashLength = hashFunction().digest_size
+    emLength = (modBits - 1) // 8
+    if (modBits - 1) % 8: emLength += 1
+    saltLength = emLength - 2 - hashLength
+
+    em = emsaPssEncode(message, modBits - 1, saltLength, hashFunction)
+
+    m = base.bytesToInt(em)
+    s = sign(d, n, m)
+    
+    return base.intToBytes(s)
+
+
+def ssaPssVerify(e: int, n: int, message: bytes, signature: bytes, hashFunction: callable = hashlib.sha256) -> bool:
+    """RSASSA-PSS verification implementation by PKCS#1, Section 8.1.2
+    Parameters:
+        e: int
+            RSA public exponent
+        
+        n: int
+            RSA modulus
+        
+        message: bytes
+            message that was signed
+        
+        signature: bytes
+            RSASSA-PSS signature to check
+        
+        hashFunction: callable
+            hash function that was used to generate signature. Must conform to hashlib protocols. 
+            By default hashlib.sha256 is used.
+    
+    Returns:
+        result: bool
+            True if signature is correct and False otherwise
+    """
+
+    modBits = n.bit_length()
+    k = base.byteLength(n)
+    if len(signature) > k or len(signature) < k - 1: return False
+
+    s = base.bytesToInt(signature)
+    m = verify(e, n, s)
+
+    emLength = (modBits - 1) // 8
+    if (modBits - 1) % 8: emLength += 1
+
+    em = base.intToBytes(m, emLength)
+
+    hashLength = hashFunction().digest_size
+    saltLength = emLength - hashLength - 2
+
+    return emsaPssVerify(message, em, modBits - 1, saltLength, hashFunction)
