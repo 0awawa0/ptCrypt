@@ -2,12 +2,16 @@ from ptCrypt.Asymmetric import DSA
 
 
 def repeatedSecretAttack(
+    p: int,
+    q: int,
     message1: any,
-    signature1: DSA.Signature, 
+    r1: int,
+    s1: int, 
     message2: any,
-    signature2: DSA.Signature,
-    hashFunction: callable
-) -> DSA.PrivateKey:
+    r2: int,
+    s2: int,
+    hashFunction: callable = None
+) -> int:
     """This attack requires two distinct messages and their signatures. 
     If two messages were signed with same private key and same secret value, 
     this function will return valid private key for DSA.
@@ -32,30 +36,24 @@ def repeatedSecretAttack(
             second message's signature
 
     Returns:
-        result: DSA.PrivateKey
+        result: int
             Recovered private key or None, if the attack has failed
     """
 
-    s1 = signature1.s
-    s2 = signature2.s
-
-    r = signature1.r
-    q = signature1.params.primes.q
-
     if type(message1) is bytes:
-        message1 = DSA.prepareMessage(message1, signature1.params, hashFunction)
+        message1 = DSA.prepareMessage(message1, q, hashFunction)
     
     if type(message2) is bytes:
-        message2 = DSA.prepareMessage(message2, signature2.params, hashFunction)
+        message2 = DSA.prepareMessage(message2, q, hashFunction)
 
     diff = pow((s1 - s2) % q, -1, q)
     hashDiff = (message1 - message2) % q
 
     k = (hashDiff * diff) % q
     
-    rInv = pow(r, -1, q)
+    rInv = pow(r1, -1, q)
     x1 = (rInv * (s1 * k - message1)) % q
     x2 = (rInv * (s2 * k - message2)) % q
 
-    if x1 == x2: return DSA.PrivateKey(signature1.params, x1)
+    if x1 == x2: return x1
     else: return None

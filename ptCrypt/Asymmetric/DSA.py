@@ -1,3 +1,4 @@
+from lib2to3.pgen2 import pgen
 from ptCrypt.Math import base, primality
 import hashlib
 from datetime import date, datetime
@@ -5,392 +6,7 @@ import secrets
 from ptCrypt.Util.keys import FFC_APPROVED_LENGTHS
 
 
-class Primes:
-    """Class that encapsulates primes p and q
-
-    Attributes:
-        p: int
-            Bigger prime
-        q: int
-            Smaller prime
-    """
-
-    def __init__(self, p: int, q: int):
-        """Initializes class object with p and q
-
-        Parameters:
-            p: int
-                Bigger prime
-                
-            q: int
-                Smaller prime
-        """
-
-        self.p = p
-        self.q = q
-
-    def beautyRepr(self, level: int = 1) -> str:
-        """Returns object's beautified string representation
-
-        Parameters:
-            level: int
-                Indentation level
-        """
-
-        indent = "\t" * level
-        return f"Primes: \n{indent}p: {hex(self.p)}\n{indent}q: {hex(self.q)}"
-
-
-class Params:
-    """Class that encapsulates basic DSA parameters
-
-    Attributes:
-        primes: Primes
-            Prime numbers p and q
-        g: int
-            Gorup generator
-    """
-
-    def __init__(self, primes: Primes, g: int):
-        """Initializes parameters object with given primes and generator
-
-        Parameters:
-            primes: int
-                Primes p and q
-                
-            g: int
-                Group generator
-        """
-
-        self.primes = primes
-        self.g = g
-
-    def beautyRepr(self, level: int = 1) -> str:
-        """Returns object's beautified string representation
-
-        Parameters:
-            level: int
-                Indentation level
-        """
-        primesRepr = self.primes.beautyRepr(level + 1)
-        indent = "\t" * level
-        return f"DSA Params: \n{indent}{primesRepr}\n{indent}g: {self.g}"
-
-
-class PrimesGenerationResult:
-    pass
-
-
-class ProbablePrimesGenerationResult(PrimesGenerationResult):
-    """Encapsulates result of the probable primes generation
-    This result includes status of generation, generated primes and parameters 
-    counter and domainParameterSeed used to verify generated primes. 
-    See FIPS 186-4 for details
-
-    Attributes:
-        status: bool
-            True if generation was successful
-            False if generation failed
-                
-        primes: Primes
-            primes p and q. If status is False, this field is None
-                
-        verifyParams: ProbablePrimesGenerationResult.VerifyParams
-            domainParameterSeed and counter parameters for primes verification
-    """
-
-    class VerifyParams:
-        """Encapsulates parameters for primes verification
-        See FIPS 186-4 for details
-
-        Attributes:
-            domainParameterSeed: int
-            counter: int
-        """
-
-        def __init__(self, domainParameterSeed: int, counter: int):
-            """Initializes object with domainParameterSeed and counter
-
-            Parameters:
-                domainParameterSeed: int
-                    domain_parameter_seed value for primes verification
-                        
-                counter: int
-                    counter value for primes verification
-                    
-            See FIPS 186-4 for details
-            """
-
-            self.domainParameterSeed = domainParameterSeed
-            self.counter = counter
-
-        def beautyRepr(self, level: int = 1) -> str:
-            """Returns object's beautified string representation
-
-            Parameters:
-                level: int
-                    Indentation level
-            """
-            indent = "\t" * level
-            return f"ProbablePrimesVerifyParams:\n{indent}domainPrameterSeed: {hex(self.domainParameterSeed)}\n{indent}counter: {hex(self.counter)}"
-
-    def __init__(self, status: bool, primes: Primes, verifyParams: VerifyParams):
-        """Initializes object with status, primes and verification parameters
-
-        Parameters:
-            status: bool
-                Generation status, indicates if generation was successful
-                    
-            primes: Primes
-                Generated prime numbers
-                    
-            verifyParams: ProbablePrimesGenerationResult.VerifyParams
-                Parameters for primes verification
-        """
-
-        self.status = status
-        self.primes = primes
-        self.verifyParams = verifyParams
-
-    def beautyRepr(self, level: int = 1) -> str:
-        """Returns object's beautified string representation
-
-        Parameters:
-            level: int
-                Indentation level
-        """
-
-        primesRepr = self.primes.beautyRepr(level + 1)
-        verifyParamsRepr = self.verifyParams.beautyRepr(level + 1)
-        indent = "\t" * level
-        return f"ProbablePrimesGenerationResult: \n{indent}status: {self.status}\n{indent}{primesRepr}\n{indent}{verifyParamsRepr}"
-
-
-class ProvablePrimesGenerationResult(PrimesGenerationResult):
-    """Encapsulates result of provable primes generation.
-    This result includes status of generation, generated primes and parameters
-    pSeed, qSeed, pGenCounter, qGenCounter used to verify generated primes.
-    See FIPS 186-4 for details
-
-    Attributes:
-        status: bool
-            True if generation was successful
-            False if generation failed
-        
-        primes: Primes
-            primes p and q. If status is False, this field is None
-        
-        verifyParams: ProvablePrimesGenerationResult.VerifyParams
-            pSeed, qSeed, pGenCounter and qGenCounter for primes verification
-    """
-    
-    class VerifyParams:
-        """Encapsulates parameters for primes verification
-        See FIPS 186-4 for details
-
-        Attributes:
-            firstSeed: int
-            pSeed: int
-            qSeed: int
-            pGenCounter: int
-            qGenCounter: int
-        """
-
-        def __init__(self, firstseed: int, pseed: int, qseed: int, pGenCounter:int, qGenCounter: int):
-            """Initializes object with pSeed, qSeed, pGenCounter and qGenCounter
-
-            Parameters:
-                firstseed: int
-                pseed: int
-                qseed: int
-                pGenCounter: int
-                qGenCounter: int
-            """
-
-            self.firstSeed = firstseed
-            self.pSeed = pseed
-            self.qSeed = qseed
-            self.pGenCounter = pGenCounter
-            self.qGenCounter = qGenCounter
-        
-        def beautyRepr(self, level: int = 1) -> str:
-            """Returns object's beautified string representation
-
-            Parameters:
-                level: int
-                    Indentation level
-            """
-
-            indent = "\t" * level
-            return f"VerifyParams: \n{indent}pSeed: {hex(self.pSeed)}\n{indent}qSeed: {hex(self.qSeed)}\n{indent}pGenCounter: {hex(self.pGenCounter)}\n{indent}qGenCounter: {hex(self.qGenCounter)}"
-    
-    def __init__(self, status: bool, primes: Primes, verifyParams: VerifyParams):
-        """Initializes object with status, primes, verifyParams
-
-        Parameters:
-            status: bool
-                True if generation succeeded
-                False if generation failed
-            
-            primes: Primes
-                Generated prime numbers p and q
-                This field is None if status is False
-            
-            verifyParams: ProvablePrimesGenerationResult.VerifyParams
-                Parameters for primes verification
-        """
-
-        self.status = status
-        self.primes = primes
-        self.verifyParams = verifyParams
-    
-    def beautyRepr(self, level: int = 1) -> str:
-        """Returns object's beautified string representation
-
-        Parameters:
-            level: int
-                Indentation level
-        """
-
-        indent = "\t" * level
-        primesRepr = self.primes.beautyRepr(level + 1)
-        verifyParamsRepr = self.verifyParams.beautyRepr(level + 1)
-
-        return f"ProvablePrimesGenerationResult: \n{indent}status: {self.status}\n{indent}{primesRepr}\n{indent}{verifyParamsRepr}"
-
-
-class VerifiableRootGenerationResult:
-
-    def __init__(self, status: bool, params: Params, domainParameterSeed: bytes, index: int):
-
-        self.status = status
-        self.params = params
-        self.domainParameterSeed = domainParameterSeed
-        self.index = index
-    
-    def beautyRepr(self, level: int = 1):
-        paramsRepr = self.params.beautyRepr(level + 1)
-        indent = "\t" * level
-        return f"VerifiableRootGenerationResult: \n{indent}status: {self.status}\n{indent}{paramsRepr}\n{indent}domainParameterSeed: {self.domainParameterSeed.hex()}\n{indent}index: {hex(self.index)}"
-
-
-class PublicKey:
-    """Encapsulates DSA public key
-
-    Attributes:
-        params: Params
-            DSA parameters: p, q and g
-
-        y: int
-            Public exponent
-    """
-
-    def __init__(self, params: Params, y: int):
-        """Initializes object with given params and public exponent
-                
-        Parameters:
-            params: Params
-                DSA parameters
-            
-            y: int
-                Public exponent
-        """
-
-        self.params = params
-        self.y = y
-    
-    def beautyRepr(self, level: int = 1) -> str:
-        """Returns object's beautified string representation
-
-        Parameters:
-            level: int
-                Indentation level
-        """
-
-        indent = "\t" * level
-        paramsRepr = self.params.beautyRepr(level + 1)
-
-        return f"DSA Public Key: \n{indent}{paramsRepr}\n{indent}y: {hex(self.y)}"
-
-
-class PrivateKey:
-    """Encapsulates DSA private key
-
-    Attributes:
-        params: Params
-            DSA parameters: p, q and g
-            
-        x: int
-            Private exponent
-    """
-
-    def __init__(self, params: Params, x: int):
-        """Initializes object with given params and private exponent
-
-        Parameters:
-            params: Params
-                DSA parameters
-            
-            x: int
-                Private exponent
-            """
-        self.params = params
-        self.x = x
-    
-    def beautyRepr(self, level: int = 1) -> str:
-        """Returns object's beautified string representation
-
-        Parameters:
-            level: int
-                Indentation level
-        """
-
-        indent = "\t" * level
-        paramsRepr = self.params.beautyRepr(level + 1)
-
-        return f"DSA Private Key: \n{indent}{paramsRepr}\n{indent}x: {hex(self.x)}"
-
-
-class Signature:
-    """Encapsulates DSA signature
-
-    Attributes:
-        params: Params
-            DSA parameters: p, q and g
-            
-        r, s: int
-            DSA signature pair
-    """
-
-    def __init__(self, params, r: int, s: int):
-        """Initializes object with  given params and (r, s) pair
-
-        Parameters:
-            params: Params
-                DSA parameters
-                
-            r: int
-            s: int
-        """
-        self.params = params
-        self.r = r
-        self.s = s
-    
-    def beautyRepr(self, level: int = 1) -> str:
-        """Returns object's beautified string representation
-
-        Parameters:
-            level: int
-                Indentation level
-        """
-
-        indent = "\t" * level
-        paramsRepr = self.params.beautyRepr(level + 1)
-
-        return f"DSA Signature: \n{indent}{paramsRepr}\n{indent}r: {hex(self.r)}\n{indent}s: {hex(self.s)}"
-
-
-def generateProbablePrimes(N: int, L: int, seedLength: int, hashFunction=hashlib.sha256) -> ProbablePrimesGenerationResult:
+def generateProbablePrimes(N: int, L: int, seedLength: int, hashFunction: callable = hashlib.sha256, forceWeak: bool = False) -> tuple:
     """Generates probable primes p and q by algorithm from
     FIPS 186-4, Appendix A.1.1.2
 
@@ -409,17 +25,33 @@ def generateProbablePrimes(N: int, L: int, seedLength: int, hashFunction=hashlib
             Hash function output length must not be less than N. 
             By FIPS 186-4 one of APPROVED_HASHES should be used
         
+        forceWeak: bool
+            Indicates if N and L should be verified to be approved by the standard. False by default.
+
     Returns:
-        result: ProbablePrimesGenerationResult
-            Result of primes generation. result.status == False means something is wrong with
-            passed parameters.
+        result: tuple
+            Tuple of generated parameters:
+                1. status: bool
+                    True if generation was successful and False otherwise
+                
+                2. p: int
+                    Bigger prime
+                
+                3. q: int
+                    Smaller prime
+                
+                4. domainParameterSeed: int
+                    Seed for for primes verification
+                
+                5. counter: int
+                    Counter for primes verification
     """
 
     # Steps 1 and 2
-    if (N, L) not in FFC_APPROVED_LENGTHS:
-        return ProbablePrimesGenerationResult(False, None, None)
+    if (N, L) not in FFC_APPROVED_LENGTHS and not forceWeak:
+        return (False, None, None, None, None)
     if seedLength < N:
-        ProbablePrimesGenerationResult(False, None, None)
+        (False, None, None, None, None)
 
     # Setting count of Miller-Rabin tests to perform before single Lucas test
     # according to Appendix C.3
@@ -439,7 +71,7 @@ def generateProbablePrimes(N: int, L: int, seedLength: int, hashFunction=hashlib
     # Length of hash funciton output in bits
     outlen = hashFunction().digest_size * 8
     if outlen < N:
-        return ProbablePrimesGenerationResult(False, None, None)
+        return (False, None, None, None, None)
 
     # Steps 3 and 4
     #   n = ceil(L / outlen) - 1
@@ -510,50 +142,54 @@ def generateProbablePrimes(N: int, L: int, seedLength: int, hashFunction=hashlib
                     if primality.lucasTest(p):
 
                         # Step 11.8
-                        primes = Primes(p, q)
-                        verifyParams = ProbablePrimesGenerationResult.VerifyParams(domainParameterSeed, counter)
-
-                        return ProbablePrimesGenerationResult(True, primes, verifyParams)
+                        return (True, p, q, domainParameterSeed, counter)
 
             # Step 11.9
             offset = offset + n + 1
 
-    return ProbablePrimesGenerationResult(False, None, None)
+    return (False, None, None, None, None)
 
 
-def verifyProbablePrimesGenerationResult(result, hashFunction=hashlib.sha256) -> bool:
+def verifyProbablePrimesGenerationResult(p: int, q: int, domainParameterSeed: int, counter: int, hashFunction=hashlib.sha256, forceWeak: bool = False) -> bool:
     """Verifies if primes were generated by algorithm from
     FIPS 186-4, Appendix A.1.1.2
 
     Note that verification takes at least as much time as generation
 
     Parameters:
-        result: ProbablePrimesGenerationResult
-            Value to be verified
+        p: int
+            Bigger prime
+        
+        q: int
+            Smaller prime
+        
+        seed: int
+            domainParameterSeed from generation function
+        
+        counter: int
+            counter from generation function
             
         hashFunction: callable
             Hash function that conforms to hashlib protocols. 
             This function must be equal to the one used for primes generation
             By default hashlib.sha256 is used.
             By FIPS 186-4, one of APPROVED_HASHES should be used
-            
+        
+        forceWeak: bool
+            Indicates if p and q should be verified to have approved lengths. False by default
+
     Returns:
         result: bool
             True if verification succeeds
             False if verification fails
     """
 
-    p = result.primes.p
-    q = result.primes.q
-    domainParameterSeed = result.verifyParams.domainParameterSeed
-    counter = result.verifyParams.counter
-
     # Steps 1, 2
     N = q.bit_length()
     L = p.bit_length()
 
     # Step 3
-    if (N, L) not in FFC_APPROVED_LENGTHS: return False
+    if (N, L) not in FFC_APPROVED_LENGTHS and not forceWeak: return False
 
     # Setting count of Miller-Rabin tests to perform before single Lucas test
     # according to Appendix C.3
@@ -658,7 +294,7 @@ def verifyProbablePrimesGenerationResult(result, hashFunction=hashlib.sha256) ->
     return False
 
 
-def getFirstSeed(N: int, seedlen: int):
+def getFirstSeed(N: int, seedlen: int, forceWeak: bool = False):
     """Generates first seed for provable primes generation
 
     Parameters:
@@ -667,6 +303,9 @@ def getFirstSeed(N: int, seedlen: int):
         
         seedlen: int
             length of seed to return, must not be less than N
+        
+        forceWeak: bool
+            Indicates if N should be checked to be approved. False by default.
     
     Returns:
         firstSeed: int
@@ -675,10 +314,13 @@ def getFirstSeed(N: int, seedlen: int):
 
     firstSeed = 0
     
-    nIsCorrect = False
-    for lengths in FFC_APPROVED_LENGTHS:
-        nIsCorrect = nIsCorrect or (N in lengths)
-    
+    if not forceWeak:
+        nIsCorrect = False
+        for lengths in FFC_APPROVED_LENGTHS:
+            nIsCorrect = nIsCorrect or (N in lengths)
+    else:
+        nIsCorrect = True
+
     if not nIsCorrect: return None
     if seedlen < N: return None
 
@@ -689,7 +331,7 @@ def getFirstSeed(N: int, seedlen: int):
     return firstSeed
 
 
-def generateProvablePrimes(N: int, L: int, firstSeed: int, hashFunction: callable = hashlib.sha256) -> ProvablePrimesGenerationResult:
+def generateProvablePrimes(N: int, L: int, firstSeed: int, hashFunction: callable = hashlib.sha256, forceWeak: bool = False) -> tuple:
     """Generates provabele primes p and q by algorithm from
     FIPS 186-4, Appendix A.1.2.1.2
 
@@ -708,17 +350,43 @@ def generateProvablePrimes(N: int, L: int, firstSeed: int, hashFunction: callabl
             Hash function output length must not be less than N
             By FIPS 186-4 one of APPROVED_HASHES should be used
     
+        forceWeak: bool
+            Indicates if N and L should be verified to be approved lengths. False by default.
+
     Returns:
-        result: ProvablePrimesGenerationResult
-            Result of primes generation
+        result: tuple
+            tuple of generation results:
+                1. status: bool
+                    True if generation was successful and False otherwise
+                
+                2. p: int
+                    Bigger prime
+                
+                3. q: int
+                    Smaller prime
+                
+                4. firstSeed: int
+                    Same as the firstSeed parameter. Will be used for verifications
+
+                5. pSeed: int
+                    pSeed for verification function
+                
+                6. qSeed: int
+                    qSeed for verification function
+                
+                7. pGenCounter: int
+                    pGenCounter for verification function
+                
+                8. qGenCounter: int
+                    qGenCounter for verification function
     """
 
     # Step 1
-    if (N, L) not in FFC_APPROVED_LENGTHS: return ProvablePrimesGenerationResult(False, None, None)
+    if (N, L) not in FFC_APPROVED_LENGTHS and not forceWeak: return (False, None, None, None, None, None, None, None)
     
     # Step 2
-    d = primality.shaweTaylorRandomPrime(N, firstSeed)
-    if not d["status"]: return ProvablePrimesGenerationResult(False, None, None)
+    d = primality.shaweTaylor(N, firstSeed)
+    if not d["status"]: return (False, None, None, None, None, None, None, None)
 
     q = d["prime"]
     qSeed = d["primeSeed"]
@@ -729,8 +397,8 @@ def generateProvablePrimes(N: int, L: int, firstSeed: int, hashFunction: callabl
     if L % 2 == 0: p0Length = L // 2 + 1
     else: p0Length = L // 2 + 2
 
-    d = primality.shaweTaylorRandomPrime(p0Length, qSeed)
-    if not d["status"]: return ProvablePrimesGenerationResult(False, None, None)
+    d = primality.shaweTaylor(p0Length, qSeed)
+    if not d["status"]: return (False, None, None, None, None, None, None, None)
 
     p0 = d["prime"]
     pSeed = d["primeSeed"]
@@ -788,32 +456,52 @@ def generateProvablePrimes(N: int, L: int, firstSeed: int, hashFunction: callabl
 
         # Step 19
         if 1 == base.gcd(z - 1, p) and 1 == pow(z, p0, p):
-            primes = Primes(p, q)
-            verifyParams = ProvablePrimesGenerationResult.VerifyParams(firstSeed, pSeed, qSeed, pGenCounter, qGenCounter)
-            return ProvablePrimesGenerationResult(True, primes, verifyParams)
+            return (True, p, q, firstSeed, pSeed, qSeed, pGenCounter, qGenCounter)
     
         # Step 20
-        if pGenCounter > (4 * L + oldCounter): return ProvablePrimesGenerationResult(False, None, None)
+        if pGenCounter > (4 * L + oldCounter): return (False, None, None, None, None, None, None, None)
 
         # Step 21
         t += 1
 
 
-def verifyProvablePrimesGenerationResult(result: ProvablePrimesGenerationResult, hashFunction: callable=hashlib.sha256) -> bool:
+def verifyProvablePrimesGenerationResult(
+    p: int,
+    q: int, 
+    firstSeed: int, 
+    pSeed: int, 
+    qSeed: int, 
+    pGenCounter: int,
+    qGenCounter: int,
+    hashFunction: callable=hashlib.sha256,
+    forceWeak: bool = False
+) -> bool:
     """Verifies if primes were generated by algorithm from
-    FIPS 186-4, Appendix 1.2.1.2
+    FIPS 186-4, Appendix 1.2.2
 
     Note that verification takes at least as much time as generation
 
     Parameters:
-        result: ProvablePrimesGenerationResult
-            Value to be verified
+        p: int
+            Bigger prime
+        
+        q: int
+            Smaller prime
+        
+        firstSeed: int
+            Seed that was passed to generation function
+        
+        pSeed, qSeed, pGenCounter, qGenCounter: int
+            Parameters returned from generation function
         
         hashFunction: callable
             Hash function thath conforms to hashlib protocols.
             This function must be equal to the one used for primes generation
             By default hashlib.sha256 is used
             By FIPS 186-4, one of APPROVED_HASHES should be used
+        
+        forceWeak: bool
+            Indicates if length of p and length of q should be verified to have approved bit length. False by default
 
     Returns:
         result: bool
@@ -821,31 +509,17 @@ def verifyProvablePrimesGenerationResult(result: ProvablePrimesGenerationResult,
             False if verification fails
     """
 
-    p = result.primes.p
-    q = result.primes.q
-    firstSeed = result.verifyParams.firstSeed
-    pSeed = result.verifyParams.pSeed
-    qSeed = result.verifyParams.qSeed
-    pGenCounter = result.verifyParams.pGenCounter
-    qGenCounter = result.verifyParams.qGenCounter
-
     L = p.bit_length()
     N = q.bit_length()
 
-    if (N, L) not in FFC_APPROVED_LENGTHS: return False
+    if (N, L) not in FFC_APPROVED_LENGTHS and not forceWeak: return False
 
     if firstSeed < pow(2, N - 1): return False
     if pow(2, N) <= q: return False
     if pow(2, L) <= p: return False
     if (p - 1) % q != 0: return False
 
-    check = generateProvablePrimes(N, L, firstSeed, hashFunction)
-    checkP = check.primes.p
-    checkQ = check.primes.q
-    checkPSeed = check.verifyParams.pSeed
-    checkQSeed = check.verifyParams.qSeed
-    checkPGenCounter = check.verifyParams.pGenCounter
-    checkQGenCounter = check.verifyParams.qGenCounter
+    check, checkP, checkQ, firstSeed, checkPSeed, checkQSeed, checkPGenCounter, checkQGenCounter = generateProvablePrimes(N, L, firstSeed, hashFunction, forceWeak)
 
     if checkP != p: return False
     if checkQ != q: return False
@@ -857,7 +531,7 @@ def verifyProvablePrimesGenerationResult(result: ProvablePrimesGenerationResult,
     return True
 
 
-def generateUnverifiableG(primes: Primes, seed: int = 2, update: callable = lambda x: x + 1) -> tuple:
+def generateUnverifiableG(p: int, q: int, seed: int = 2, update: callable = lambda x: x + 1) -> tuple:
     """Generates g value for DSA according to algorithm from FIPS 186-4, Appendix A.2.1
 
     Note, according to the standard argument seed must be unique for primes pair, but this function
@@ -865,9 +539,12 @@ def generateUnverifiableG(primes: Primes, seed: int = 2, update: callable = lamb
     Function will return seed along with g, so caller can mark it as used.
 
     Parameters:
-        primes: Primes
-            previously generated primes p and q
+        p: int
+            Bigger prime
         
+        q: int
+            Smaller prime
+
         seed: int
             initial value of h, see FIPS 186-4 for details
         
@@ -876,12 +553,13 @@ def generateUnverifiableG(primes: Primes, seed: int = 2, update: callable = lamb
     
     Returns:
         result: tuple
-            tuple of two values. First value is Params object, that contains DSA domain parameters p, q and g
-            Second value is seed, used to generate value of g.
+            tuple of two values:
+                g: int
+                    Generated primitive root
+                
+                seed: int
+                    Updated seed
     """
-
-    p = primes.p
-    q = primes.q
 
     e = (p - 1) // q
 
@@ -890,12 +568,11 @@ def generateUnverifiableG(primes: Primes, seed: int = 2, update: callable = lamb
         if g != 1: break
 
         seed = update(seed)
-    
-    parameters = Params(primes, g)
-    return (parameters, seed)
+
+    return (g, seed)
 
 
-def partiallyVerifyRootGeneration(parameters: Params) -> bool:
+def partiallyVerifyRootGeneration(p: int, q: int, g: int) -> bool:
     """Checks partial validity of DSA parameters according to algorithm from FIPS 186-4, Appendix A.2.2
 
     Note that this function verifies correctness, but not security. As standard states:
@@ -903,8 +580,14 @@ def partiallyVerifyRootGeneration(parameters: Params) -> bool:
     that generated g, but may not be know by other entities) cannot be checked'
 
     Parameters:
-        parameters: Params
-            object that contains DSA parameters p, q and g
+        p: int
+            Bigger prime
+        
+        q: int
+            Smaller prime
+        
+        g: int
+            Primitive root
     
     Returns:
         status: bool
@@ -912,52 +595,43 @@ def partiallyVerifyRootGeneration(parameters: Params) -> bool:
             False if parameters are definitely not valid
     """
 
-    p = parameters.primes.p
-    q = parameters.primes.q
-    g = parameters.g
     if g < 2 or g > p - 1: return False
     if pow(g, q, p) == 1: return True
     return False
 
 
-def generateVerifiableG(primesGenerationResult: PrimesGenerationResult, index: int, hashFunction: callable=hashlib.sha256) -> VerifiableRootGenerationResult:
+def generateVerifiableG(p: int, q: int, domainParameterSeed: int, index: int, hashFunction: callable=hashlib.sha256) -> int:
     """Generates verifiable root for DSA. To generate more than one root for same primes, change index
     Algorithm is specified by FIPS 186-4, Appendix A.2.3
 
     Parameters:
-        primesGenerationResult: PrimesGenerationResult
-            result of primes generation must be one either ProbablePrimesGenerationResult or ProvablePrimesGenerationResult
+        p: int
+            Bigger prime
+        
+        q: int
+            Smaller prime
+        
+        domainParameterSeed: int
+            The seed returned by primes generation function. 
+            When primes generated by algorithm from Appendix A.1.1.2 the domainParameterSeed value is used
+            When primes generated by algorithm from Appendix A.1.2.1 the domainParameterSeed is concatenated parameters firstSeed + pSeed + qSeed
 
         index: int
-            index of root to generate
+            Number of root to generate. For same p and q this function can generate different roots for different index values.
+            Index value must be bounded to 8 bit number
         
         hashFunction: callable
             hash function that conforms to hashlib protocols. By default hashlib.sha256 is used
     
     Returns:
-        result: VerifiableRootGeneration
-            generation result, that contains primes, generated root, domainParameterSeed and index. 
+        result: int
+            Generated primitive root. May be returned None if generate goes wrong.
     """
 
-    if type(primesGenerationResult) is ProbablePrimesGenerationResult:
-        domainParamSeedBytes = base.intToBytes(primesGenerationResult.verifyParams.domainParameterSeed)
-
-    elif type(primesGenerationResult) is ProvablePrimesGenerationResult:
-        firstSeed = base.intToBytes(primesGenerationResult.verifyParams.firstSeed)
-        pSeed = base.intToBytes(primesGenerationResult.verifyParams.pSeed)
-        qSeed = base.intToBytes(primesGenerationResult.verifyParams.qSeed)
-        domainParamSeedBytes = firstSeed + pSeed + qSeed
-    
-    else:
-        return VerifiableRootGenerationResult(False, None, None, None)
-
-    if index.bit_length() > 8: return VerifiableRootGenerationResult(False, None, None, None)
+    if index.bit_length() > 8: return (False, None, None, None)
     
     ggen = b"\x67\x67\x65\x6e"
     indexBytes = base.intToBytes(index)
-
-    p = primesGenerationResult.primes.p
-    q = primesGenerationResult.primes.q
 
     N = q.bit_length()
     e = (p - 1) // q
@@ -967,23 +641,41 @@ def generateVerifiableG(primesGenerationResult: PrimesGenerationResult, index: i
     while True:
         count = (count + 1) & 0xffff
 
-        if count == 0: return VerifiableRootGenerationResult(False, None, None, None)
+        if count == 0: return None
 
         countBytes = base.intToBytes(count)
-        U = domainParamSeedBytes + ggen + indexBytes + countBytes
+        U = domainParameterSeed + ggen + indexBytes + countBytes
         W = base.bytesToInt(hashFunction(U).digest())
         g = pow(W, e, p)
         if g >= 2: 
-            params = Params(Primes(p, q), g)
-            return VerifiableRootGenerationResult(True, params, domainParamSeedBytes, index)
+            return g
 
 
-def verifyRootGeneration(generationResult: VerifiableRootGenerationResult, hashFunction: callable = hashlib.sha256) -> bool:
+def verifyRootGeneration(
+    p: int,
+    q: int, 
+    g: int, 
+    domainParameterSeed: int, 
+    index: int, 
+    hashFunction: callable = hashlib.sha256
+) -> bool:
     """Verifies that root were generated by algorithm from FIPS 186-4, Appendix A.2.4
 
     Parameters:
-        generationResult: VerifiableRootGenerationResult
-            result of generation, that contains all the information needed to verify the parameters
+        p: int
+            Bigger prime
+        
+        q: int
+            Smaller prime
+        
+        g: int
+            Primitive root
+        
+        domainParameterSeed: int
+            seed returned from primes generation function and used for root generation
+        
+        index: int
+            Primitive root index. See generateVerifiableG for details
     
         hashFunction: callable
             hash function that conforms to hashlib protocols. Must be the same function that was used for root generation
@@ -995,15 +687,12 @@ def verifyRootGeneration(generationResult: VerifiableRootGenerationResult, hashF
             False either if root is not correct at all, or if it is was not generated by FIPS 186-4
     """
 
-    if not partiallyVerifyRootGeneration(generationResult.params): return False
+    if not partiallyVerifyRootGeneration(p, q, g): return False
 
     ggen = b"\x67\x67\x65\x6e"
 
-    index = generationResult.index & 0xff
+    index = index & 0xff
     indexBytes = base.intToBytes(index)
-    g = generationResult.params.g
-    p = generationResult.params.primes.p
-    q = generationResult.params.primes.q
 
     N = q.bit_length()
     e = (p - 1) // q
@@ -1015,7 +704,7 @@ def verifyRootGeneration(generationResult: VerifiableRootGenerationResult, hashF
         if count == 0: return False
 
         countBytes = base.intToBytes(count)
-        U = generationResult.domainParameterSeed + ggen + indexBytes + countBytes
+        U = domainParameterSeed + ggen + indexBytes + countBytes
         W = base.bytesToInt(hashFunction(U).digest())
         computedG = pow(W, e, p)
 
@@ -1028,8 +717,9 @@ def generateParams(
     L: int, 
     provablePrimes: bool = False,
     verifiableRoot: bool = False,
-    hashFunction: callable = hashlib.sha256
-) -> Params:
+    hashFunction: callable = hashlib.sha256,
+    forceWeak: bool = False
+) -> tuple:
     """Generate random DSA parameters with minimal setup. 
     This function is not appropriate for systems with long lifecycle.
 
@@ -1053,61 +743,85 @@ def generateParams(
         hashFunction: callable
             hash function to use for primes and root generation. Must conform to hashlib protocols.
             By default hashlib.sha256 is used
+        
+        forceWeak: bool
+            Indicates if N and L should be verified to be approved by the standard.
     
     Returns:
-        params: Params
-            object, that contains generated p, q, and g. Will return None if passed wrong parameters,
+        params: tuple
+            tuple that contains generated p, q, and g. Will return None if passed wrong parameters,
             such as (N, L) pair not from APPROVED_LENGTHS or hash function digest size less than N
     """
 
-    if (N, L) not in FFC_APPROVED_LENGTHS: return None
+    if (N, L) not in FFC_APPROVED_LENGTHS and not forceWeak: return None
     outlen = hashFunction().digest_size * 8
     if outlen < N: return None
 
     if provablePrimes:
-        firstSeed = getFirstSeed(N, N)
-        primes = generateProvablePrimes(N, L, firstSeed, hashFunction)
-        while primes.status == False:
-            firstSeed = getFirstSeed(N, N)
-            primes = generateProvablePrimes(N, L, firstSeed, hashFunction)
+        firstSeed = getFirstSeed(N, N,forceWeak)
+        result = generateProvablePrimes(N, L, firstSeed, hashFunction, forceWeak)
+        while result[0] == False:
+            firstSeed = getFirstSeed(N, N, forceWeak)
+            result = generateProvablePrimes(N, L, firstSeed, hashFunction, forceWeak)
     else:
-        primes = generateProbablePrimes(N, L, N, hashFunction)
+        result = generateProbablePrimes(N, L, N, hashFunction, forceWeak)
     
+    p = result[1]
+    q = result[2]
+    domainParameterSeed = base.intToBytes(result[3])
+    if provablePrimes:
+        domainParameterSeed = domainParameterSeed + base.intToBytes(result[4]) + base.intToBytes(result[5])
+
     if verifiableRoot:
-        params = generateVerifiableG(primes, 1, hashFunction).params
+        index = 1
+        g = generateVerifiableG(p, q, domainParameterSeed, 1, hashFunction)
+        while g == None and index < 256:
+            index += 1
+            g = generateVerifiableG(p, q, domainParameterSeed, index, hashFunction)
+        if g == None: return None
     else:
-        params = generateUnverifiableG(primes.primes)[0]
+        g = generateUnverifiableG(p, q)[0]
+        if g == None: return None
 
-    return params
+    return (p, q, g)
 
 
-def generateKeys(params: Params, useAdditionalBits: bool = False) -> tuple:
+def generateKeys(p: int, q: int, g: int, useAdditionalBits: bool = False, forceWeak: bool = False) -> tuple:
     """Generates public and private keys for DSA by algorithms specified
     in FIPS 186-4, Appendix B.1.1 and B.1.2. This function implements both algorithms.
     Set useAdditionalBits to True to use algorithm from B.1.1 and to False to use algorithm from B.1.2
 
     Parameters:
-        params: Params
-            DSA domain parameters p, q, and g
+        p: int
+            Bigger prime
+        
+        q: int
+            Smaller prime
+        
+        g: int
+            Primitive root
         
         useAdditionalBits: bool
             Specifies the algorithm to use.
             True - use FIPS 186-4, Appendix B.1.1
             False - use FIPS 186-4, Appendix B.1.2
     
+        forceWeak: bool
+            Indicates if p and q should be verified to have approved lengths. False by default
     Returns:
-        result: tuple<PublicKey, PrivateKey>
-            generated pair of keys. May return tuples of None values if inappropriate parametes were given
+        result: tuple
+            Pair of keys:
+                1. y: int
+                    public exponent
+                
+                2. x: int
+                    private exponent
     """
-
-    p = params.primes.p
-    q = params.primes.q
-    g = params.g
 
     N = q.bit_length()
     L = p.bit_length()
 
-    if (N, L) not in FFC_APPROVED_LENGTHS: return (None, None)
+    if (N, L) not in FFC_APPROVED_LENGTHS and not forceWeak: return (None, None)
 
     if useAdditionalBits:
         c = secrets.randbits(N + 64)
@@ -1120,20 +834,26 @@ def generateKeys(params: Params, useAdditionalBits: bool = False) -> tuple:
     
     y = pow(g, x, p)
 
-    return (PublicKey(params, y), PrivateKey(params, x))
+    return (y, x)
 
 
-def generateSecret(params: Params, useAdditionalBits: bool = False) -> int:
+def generateSecret(p: int, q: int, useAdditionalBits: bool = False, forceWeak: bool = False) -> int:
     """Generates per-message random secret by algorithms specified in FIPS 186-4, Appendix B.2
 
     Parameters:
-        params: Params
-            DSA domain parameters p, q, and g
+        p: int
+            Bigger prime
+        
+        q: int
+            Smaller prime
         
         useAdditionalBits: bool
             Specifies algorithm to use
             True - use FIPS 186-4, Appendix B.2.1
             False - use FIPS 186-4, Appendix B.2.2
+        
+        forceWeak: bool
+            Indicates if p and q should be verified to have approved length. False by default
     
     Returns:
         result: int
@@ -1141,12 +861,10 @@ def generateSecret(params: Params, useAdditionalBits: bool = False) -> int:
             May return None if inappropriate parameters were given
     """
 
-    p = params.primes.p
-    q = params.primes.q
     N = q.bit_length()
     L = p.bit_length()
 
-    if (N, L) not in FFC_APPROVED_LENGTHS: return None
+    if (N, L) not in FFC_APPROVED_LENGTHS and not forceWeak: return None
 
     if useAdditionalBits:
         c = secrets.randbits(N + 64)
@@ -1174,7 +892,7 @@ def generateSecret(params: Params, useAdditionalBits: bool = False) -> int:
 
 def prepareMessage(
     message: bytes,
-    params: Params,
+    q: int,
     hashFunction: callable = hashlib.sha256
 ) -> int:
     """Processes the message before signing or verifying according to FIPS 186-4.
@@ -1191,8 +909,8 @@ def prepareMessage(
         message: bytes
             Message to process
         
-        params: Params
-            DSA domain parameters
+        q: int
+            Smaller prime
         
         hashFunction: callable
             hash function to use for message process. Must conform to hashlib protocols.
@@ -1203,7 +921,6 @@ def prepareMessage(
             Processed message as integer
     """
 
-    q = params.primes.q
     N = q.bit_length()
 
     zLength = N
@@ -1222,18 +939,30 @@ def prepareMessage(
 
 def sign(
     message: bytes,
-    key: PrivateKey,
+    p: int,
+    q: int,
+    g: int,
+    x: int,
     secret: int, 
     hashFunction: callable = hashlib.sha256
-) -> Signature:
+) -> tuple:
     """Signs message with given private key and secret
 
     Parmeters:
         message: bytes
             Message to be signed
         
-        key: PrivateKey
-            DSA private key
+        p: int
+            Bigger prime
+        
+        q: int
+            Smaller prime
+        
+        g: int
+            Primitive root
+        
+        x: int
+            Secret exponent
         
         secret: int
             unique random secret for message signature
@@ -1244,30 +973,27 @@ def sign(
             If this value is None, message bytes will be signed instead of its hash
 
     Returns:
-        signature: SIgnature
-            Signature object that contains r, s and domain parameters
+        result: tuple
+            generated signature (r, s) for message
     """
 
-    p = key.params.primes.p
-    q = key.params.primes.q
-    g = key.params.g
-    x = key.x
-
-    N = q.bit_length()
-
-    message = prepareMessage(message, key.params, hashFunction)
+    message = prepareMessage(message, q, hashFunction)
     
     r = pow(g, secret, p) % q
     s = (pow(secret, -1, q) * (message + x * r)) % q
 
     if r == 0 or s == 0: return None
-    return Signature(key.params, r, s)
+    return (r, s)
 
 
 def verify(
     message: bytes,
-    signature: Signature,
-    key: PublicKey, 
+    p: int,
+    q: int,
+    g: int,
+    r: int,
+    s: int,
+    y: int, 
     hashFunction: callable = hashlib.sha256
 ) -> bool:
     """Verifies given signature
@@ -1276,11 +1002,20 @@ def verify(
         message: bytes
             Message which signature is to be checked
         
-        signature: Signature
-            message's signature
+        p: int
+            Bigger prime
         
-        key: PublicKey
-            DSA public key
+        q: int
+            Smaller prime
+        
+        g: int
+            Primitive root
+        
+        r, s: int
+            Signature to check
+        
+        y: int
+            Public exponent
         
         hashFunction: callable
             signature's hash function. This function must conform to hashlib protocols. 
@@ -1293,20 +1028,10 @@ def verify(
             False if signature is invalid
     """
 
-    p = key.params.primes.p
-    q = key.params.primes.q
-    g = key.params.g
-    y = key.y
-
-    N = q.bit_length()
-
-    r = signature.r
-    s = signature.s
-
     if r <= 0 or r >= q: return False
     if s <= 0 or r >= q: return False
     
-    message = prepareMessage(message, key.params, hashFunction)
+    message = prepareMessage(message, q, hashFunction)
 
     w = pow(s, -1, q)
     u1 = (message * w) % q

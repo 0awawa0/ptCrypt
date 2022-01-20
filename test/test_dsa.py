@@ -2,150 +2,263 @@ import secrets
 from ptCrypt.Asymmetric import DSA
 from datetime import datetime
 import hashlib
-from ptCrypt.Attacks.DSA import repeatedSecretAttack
 from ptCrypt.Math import base, primality
+from ptCrypt.Util import keys
+from ptCrypt.Attacks.DSA import repeatedSecretAttack
 from random import getrandbits
 
 
 def testProbablePrimeGeneration():
-    t = []
-    start = datetime.now()
-    N, L = DSA.APPROVED_LENGTHS[0]
-    params = DSA.generateProbablePrimes(N, L, N, hashlib.sha256)
-    end = datetime.now()
-    t.append((end - start).seconds)
+    print("testProbablePrimeGeneration")
 
-    p = params.primes.p
-    q = params.primes.q
+    N, L = keys.FFC_APPROVED_LENGTHS[0]
+    result = DSA.generateProbablePrimes(N, L, N, hashlib.sha256)
+
+    p = result[1]
+    q = result[2]
+    assert primality.millerRabin(p, 10)
+    assert primality.millerRabin(q, 10)
+    assert (p - 1) % q == 0
+
+    N, L = (32, 128)
+    result = DSA.generateProbablePrimes(N, L, N, hashlib.sha256, forceWeak=True)
+
+    p = result[1]
+    q = result[2]
     assert primality.millerRabin(p, 10)
     assert primality.millerRabin(q, 10)
     assert (p - 1) % q == 0
     
-    avg = sum(t) / len(t)
-    print(f"Avg time: {avg} seconds")
 
 
 def testProbablePrimeVerification():
-    N, L = DSA.APPROVED_LENGTHS[0]
-    params = DSA.generateProbablePrimes(N, L, N)
-    assert DSA.verifyProbablePrimesGenerationResult(params)
+    print("testProbablePrimeVerification")
+
+    N, L = keys.FFC_APPROVED_LENGTHS[0]
+    _, p, q, seed, counter = DSA.generateProbablePrimes(N, L, N)
+    assert DSA.verifyProbablePrimesGenerationResult(p, q, seed, counter)
+
+    N, L = (32, 128)
+    _, p, q, seed, counter = DSA.generateProbablePrimes(N, L, N, forceWeak=True)
+    assert DSA.verifyProbablePrimesGenerationResult(p, q, seed, counter, forceWeak=True)
 
 
 def testProvablePrimeGeneration():
-    t = []
-    start = datetime.now()
-    N, L = DSA.APPROVED_LENGTHS[0]
+    print("testProvablePrimeGeneration")
+
+    N, L = keys.FFC_APPROVED_LENGTHS[0]
     firstSeed = DSA.getFirstSeed(N, N)
-    params = DSA.generateProvablePrimes(N, L, firstSeed)
-    end = datetime.now()
-    t.append((end - start).seconds)
-    
-    avg = sum(t) / len(t)
-    print(f"Avg time: {avg} seconds")
+    _, p, q, _, _, _, _, _ = DSA.generateProvablePrimes(N, L, firstSeed)
+
+    assert primality.millerRabin(p, 10)
+    assert primality.millerRabin(q, 10)
+
+    N, L = (32, 128)
+    firstSeed = DSA.getFirstSeed(N, N, forceWeak=True)
+    _, p, q, _, _, _, _, _ = DSA.generateProvablePrimes(N, L, firstSeed, forceWeak=True)
+
+    assert primality.millerRabin(p, 10)
+    assert primality.millerRabin(q, 10)
 
 
 def testUnverifiableG():
-    N, L = DSA.APPROVED_LENGTHS[0]
+    print("testUnverifiableG")
+
+    N, L = keys.FFC_APPROVED_LENGTHS[0]
     firstSeed = DSA.getFirstSeed(N, L)
-    primes = DSA.generateProvablePrimes(N, L, firstSeed).primes
-    g = DSA.generateUnverifiableG(primes)
-    print(g)
+    _, p, q, _, _, _, _, _ = DSA.generateProvablePrimes(N, L, firstSeed)
+    g = DSA.generateUnverifiableG(p, q)[0]
+
+    assert DSA.partiallyVerifyRootGeneration(p, q, g)
+
+    N, L = (32, 128)
+    firstSeed = DSA.getFirstSeed(N, L, forceWeak=True)
+    _, p, q, _, _, _, _, _ = DSA.generateProvablePrimes(N, L, firstSeed, forceWeak=True)
+    g = DSA.generateUnverifiableG(p, q)[0]
+
+    assert DSA.partiallyVerifyRootGeneration(p, q, g)
 
 
 def testProvablePrimeVerification():
-    N, L = DSA.APPROVED_LENGTHS[0]
+    print("testProvablePrimeVerification")
+
+    N, L = keys.FFC_APPROVED_LENGTHS[0]
     firstSeed = DSA.getFirstSeed(N, N)
-    params = DSA.generateProvablePrimes(N, L, firstSeed)
-    assert DSA.verifyProvablePrimesGenerationResult(params)
+    _, p, q, firstSeed, pSeed, qSeed, pGenCounter, qGenCounter = DSA.generateProvablePrimes(N, L, firstSeed)
+    assert DSA.verifyProvablePrimesGenerationResult(p, q, firstSeed, pSeed, qSeed, pGenCounter, qGenCounter)
+
+    N, L = (32, 128)
+    firstSeed = DSA.getFirstSeed(N, N, forceWeak=True)
+    _, p, q, firstSeed, pSeed, qSeed, pGenCounter, qGenCounter = DSA.generateProvablePrimes(N, L, firstSeed, forceWeak=True)
+    assert DSA.verifyProvablePrimesGenerationResult(p, q, firstSeed, pSeed, qSeed, pGenCounter, qGenCounter, forceWeak=True)
 
 
 def testVerifiableG():
+    print("testVerifiableG")
 
-    N, L = DSA.APPROVED_LENGTHS[0]
+    N, L = keys.FFC_APPROVED_LENGTHS[0]
     firstSeed = DSA.getFirstSeed(N, L)
     result = DSA.generateProvablePrimes(N, L, firstSeed)
-    while result.status == False:
+    while result[0] == False:
         firstSeed = DSA.getFirstSeed(N, L)
         result = DSA.generateProvablePrimes(N, L, firstSeed)
-    g = DSA.generateVerifiableG(result, 1)
-    assert DSA.verifyRootGeneration(g)
+    
+    domainParameterSeed = base.intToBytes(result[3]) + base.intToBytes(result[4]) + base.intToBytes(result[5])
+    p = result[1]
+    q = result[2]
+    g = DSA.generateVerifiableG(p, q, domainParameterSeed, 1)
+    assert DSA.verifyRootGeneration(p, q, g, domainParameterSeed, 1)
 
     result = DSA.generateProbablePrimes(N, L, N)
-    g = DSA.generateVerifiableG(result, 1)
-    assert DSA.verifyRootGeneration(g)
+    p = result[1]
+    q = result[2]
+    domainParameterSeed = base.intToBytes(result[3])
+    g = DSA.generateVerifiableG(p, q, domainParameterSeed, 1)
+    assert DSA.verifyRootGeneration(p, q, g, domainParameterSeed, 1)
+
+    N, L = (32, 128)
+    firstSeed = DSA.getFirstSeed(N, L, forceWeak=True)
+    result = DSA.generateProvablePrimes(N, L, firstSeed, forceWeak=True)
+    while result[0] == False:
+        firstSeed = DSA.getFirstSeed(N, L, forceWeak=True)
+        result = DSA.generateProvablePrimes(N, L, firstSeed, forceWeak=True)
+    
+    domainParameterSeed = base.intToBytes(result[3]) + base.intToBytes(result[4]) + base.intToBytes(result[5])
+    p = result[1]
+    q = result[2]
+    g = DSA.generateVerifiableG(p, q, domainParameterSeed, 1)
+    assert DSA.verifyRootGeneration(p, q, g, domainParameterSeed, 1)
+
+    result = DSA.generateProbablePrimes(N, L, N, forceWeak=True)
+    p = result[1]
+    q = result[2]
+    domainParameterSeed = base.intToBytes(result[3])
+    g = DSA.generateVerifiableG(p, q, domainParameterSeed, 1)
+    assert DSA.verifyRootGeneration(p, q, g, domainParameterSeed, 1)
 
 
 def testRandomParamsVerification():
+    print("testRandomParamsVerification")
     
-    N, L = DSA.APPROVED_LENGTHS[0]
-    params = DSA.generateParams(N, L, False, False)
-    assert DSA.partiallyVerifyRootGeneration(params)
+    N, L = keys.FFC_APPROVED_LENGTHS[0]
+    p, q, g = DSA.generateParams(N, L, False, False)
+    assert DSA.partiallyVerifyRootGeneration(p, q, g)
     
     
-    params = DSA.generateParams(N, L, False, True)
-    assert DSA.partiallyVerifyRootGeneration(params)
+    p, q, g = DSA.generateParams(N, L, False, True)
+    assert DSA.partiallyVerifyRootGeneration(p, q, g)
     
-    params = DSA.generateParams(N, L, True, False)
-    assert DSA.partiallyVerifyRootGeneration(params)
+    p, q, g = DSA.generateParams(N, L, True, False)
+    assert DSA.partiallyVerifyRootGeneration(p, q, g)
     
-    params = DSA.generateParams(N, L, True, True)
-    assert DSA.partiallyVerifyRootGeneration(params)
+    p, q, g = DSA.generateParams(N, L, True, True)
+    assert DSA.partiallyVerifyRootGeneration(p, q, g)
+
+    N, L = (32, 128)
+    p, q, g = DSA.generateParams(N, L, False, False, forceWeak=True)
+    assert DSA.partiallyVerifyRootGeneration(p, q, g)
+    
+    
+    p, q, g = DSA.generateParams(N, L, False, True, forceWeak=True)
+    assert DSA.partiallyVerifyRootGeneration(p, q, g)
+    
+    p, q, g = DSA.generateParams(N, L, True, False, forceWeak=True)
+    assert DSA.partiallyVerifyRootGeneration(p, q, g)
+    
+    p, q, g = DSA.generateParams(N, L, True, True, forceWeak=True)
+    assert DSA.partiallyVerifyRootGeneration(p, q, g)
 
 
-def testKeysGeneartion():
+def testKeysGeneration():
+    print("testKeysGeneration")
 
-    N, L = DSA.APPROVED_LENGTHS[0]
+    N, L = keys.FFC_APPROVED_LENGTHS[0]
     
-    params = DSA.generateParams(N, L)
-    public, private = DSA.generateKeys(params)
-    print(public.beautyRepr())
-    print(private.beautyRepr())
+    p, q, g = DSA.generateParams(N, L)
+    public, private = DSA.generateKeys(p, q, g)
+    
+    p, q, g = DSA.generateParams(N, L)
+    public, private = DSA.generateKeys(p, q, g, True)
 
-    N, L = DSA.APPROVED_LENGTHS[0]
+    N, L = (32, 128)
     
-    params = DSA.generateParams(N, L)
-    public, private = DSA.generateKeys(params, True)
-    print(public.beautyRepr())
-    print(private.beautyRepr())
+    p, q, g = DSA.generateParams(N, L, forceWeak=True)
+    public, private = DSA.generateKeys(p, q, g, forceWeak=True)
+    
+    p, q, g = DSA.generateParams(N, L, forceWeak=True)
+    public, private = DSA.generateKeys(p, q, g, True, forceWeak=True)
 
 
 def testSignature():
+    print("testSignature")
 
-    N, L = DSA.APPROVED_LENGTHS[0]
+    N, L = keys.FFC_APPROVED_LENGTHS[0]
     msg = base.intToBytes(getrandbits(4096))
 
-    params = DSA.generateParams(N, L)
-    public, private = DSA.generateKeys(params)
-    secret = DSA.generateSecret(params)
+    p, q, g = DSA.generateParams(N, L)
+    public, private = DSA.generateKeys(p, q, g)
+    secret = DSA.generateSecret(p, q)
 
-    signature = DSA.sign(msg, private, secret)
-    print(signature.beautyRepr())
-    assert DSA.verify(msg, signature, public)
+    r, s = DSA.sign(msg, p, q, g, private, secret)
+    assert DSA.verify(msg, p, q, g, r, s, public)
     
     msg = base.intToBytes(getrandbits(4096))
 
-    params = DSA.generateParams(N, L)
-    public, private = DSA.generateKeys(params)
-    secret = DSA.generateSecret(params)
+    p, q, g = DSA.generateParams(N, L)
+    public, private = DSA.generateKeys(p, q, g)
+    secret = DSA.generateSecret(p, q)
 
-    signature = DSA.sign(msg, private, secret, None)
-    print(signature.beautyRepr())
-    assert DSA.verify(msg, signature, public, None)
+    r, s = DSA.sign(msg, p, q, g, private, secret, None)
+    assert DSA.verify(msg, p, q, g, r, s, public, None)
+
+    N, L = (32, 128)
+    msg = base.intToBytes(getrandbits(4096))
+
+    p, q, g = DSA.generateParams(N, L, forceWeak=True)
+    public, private = DSA.generateKeys(p, q, g, forceWeak=True)
+    secret = DSA.generateSecret(p, q, forceWeak=True)
+
+    r, s = DSA.sign(msg, p, q, g, private, secret)
+    assert DSA.verify(msg, p, q, g, r, s, public)
+    
+    msg = base.intToBytes(getrandbits(4096))
+
+    p, q, g = DSA.generateParams(N, L, forceWeak=True)
+    public, private = DSA.generateKeys(p, q, g, forceWeak=True)
+    secret = DSA.generateSecret(p, q, forceWeak=True)
+
+    r, s = DSA.sign(msg, p, q, g, private, secret, None)
+    assert DSA.verify(msg, p, q, g, r, s, public, None)
 
 
 def testRepeatedSecretAttack():
 
-    N, L = DSA.APPROVED_LENGTHS[0]
-    params = DSA.generateParams(N, L)
-    public, private = DSA.generateKeys(params)
+    N, L = keys.FFC_APPROVED_LENGTHS[0]
+    p, q, g = DSA.generateParams(N, L)
+    public, private = DSA.generateKeys(p, q, g)
 
-    secret = DSA.generateSecret(params)
+    secret = DSA.generateSecret(p, q)
 
     message1 = base.intToBytes(secrets.randbits(4096))
-    signature1 = DSA.sign(message1, private, secret, hashFunction=None)
+    r1, s1 = DSA.sign(message1, p, q, g, private, secret, hashFunction=None)
 
     message2 = base.intToBytes(secrets.randbits(4096))
-    signature2 = DSA.sign(message2, private, secret, hashFunction=None)
+    r2, s2 = DSA.sign(message2, p, q, g, private, secret, hashFunction=None)
 
-    recoveredPrivate = repeatedSecretAttack(message1, signature1, message2, signature2, hashFunction=None)
-    assert recoveredPrivate.x == private.x
+    recoveredPrivate = repeatedSecretAttack(p, q, message1, r1, s1, message2, r2, s2)
+    assert recoveredPrivate == private
+
+    N, L = (32, 128)
+    p, q, g = DSA.generateParams(N, L, forceWeak=True)
+    public, private = DSA.generateKeys(p, q, g, forceWeak=True)
+
+    secret = DSA.generateSecret(p, q, forceWeak=True)
+
+    message1 = base.intToBytes(secrets.randbits(4096))
+    r1, s1 = DSA.sign(message1, p, q, g, private, secret, hashFunction=None)
+
+    message2 = base.intToBytes(secrets.randbits(4096))
+    r2, s2 = DSA.sign(message2, p, q, g, private, secret, hashFunction=None)
+
+    recoveredPrivate = repeatedSecretAttack(p, q, message1, r1, s1, message2, r2, s2)
+    assert recoveredPrivate == private
