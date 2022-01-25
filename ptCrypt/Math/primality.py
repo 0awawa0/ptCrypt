@@ -208,7 +208,7 @@ def getPrime(n: int, checks: int = 10) -> int:
         if millerRabin(num, checks): return num
 
 
-def primeFactors(n: int, knownFactors: list = [], info: bool = False) -> list:
+def primeFactors(n: int, knownFactors: list = [], info: bool = False, timeout: int = 5) -> list:
     """Naive integer factorization function. Extremely slow.
 
     The fucntion first checks if the number is prime with 10 Miller-Rabin tests,
@@ -261,7 +261,7 @@ def primeFactors(n: int, knownFactors: list = [], info: bool = False) -> list:
             start = datetime.now()
             print("Trying Lenstra method")
 
-        factor = lenstraFactor(n, timeout=5)
+        factor = lenstraFactor(n, timeout=timeout)
         while factor != None:
             while n % factor == 0:
                 factors.append(factor)
@@ -272,7 +272,7 @@ def primeFactors(n: int, knownFactors: list = [], info: bool = False) -> list:
                     end = datetime.now()
                     print(f"Factors found in {end - totalTime}")
 
-            factor = lenstraFactor(n, timeout=5)
+            factor = lenstraFactor(n, timeout=timeout)
         
         if info:
             end = datetime.now()

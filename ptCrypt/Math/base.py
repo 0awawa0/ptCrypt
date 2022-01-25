@@ -243,6 +243,25 @@ def bytesToInt(b: bytes, byteorder: str = "big") -> int:
     return int.from_bytes(b, byteorder)
 
 
+def pad(data: bytes, size: int, value: int = 0) -> bytes:
+    """Padds given data with given value until its length is not multiple by size
+
+    Parameters:
+        data: bytes
+            Data to pad
+        
+        size: int
+            Required size data length must be multiple to
+
+        value: int
+            Value to add to data. 0 by default
+    """
+    value = (value & 0xff)
+    while len(data) % size:
+        data += bytes([value])
+    return data
+
+
 def partition(b: bytes, length: int) -> list:
     """Partitions given byte string into list of byte strings of requested length
 
@@ -396,7 +415,15 @@ def getGenerator(p: int, q: int, seed: int = 2, update: callable = lambda x: x +
 
 
 def getPrimitiveRoot(p: int, factors: list) -> int:
-    
+    """Generates smallest primitive root modulo prime number p
+
+    Parameters:
+        p: int
+            Modulo value
+        
+        factors: list
+            List of prime divisors of value (p - 1)
+    """
     seed = 2
     while True:
         if pow(seed, p - 1, p) != 1:
