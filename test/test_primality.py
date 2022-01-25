@@ -1,4 +1,5 @@
-from ptCrypt.Math import primality, smallPrimes
+from distutils.log import info
+from ptCrypt.Math import base, primality, smallPrimes
 from ptCrypt.Asymmetric.RSA import getSeed
 from datetime import date, datetime, time
 import random
@@ -154,3 +155,32 @@ def testIfcProvablePrime():
     print(p)
     print(p1)
     print(p2)
+
+
+def testGetFfcPrimes():
+    print("testGetFfcPrimes")
+
+    # Testing provable primes generation (L <= 512)
+    for _ in range(100):
+        p, q = primality.getFfcPrimes(32, 500)
+        assert primality.millerRabin(p, 100)
+        assert primality.millerRabin(q, 100)
+
+    # Testing probable primes generation (L > 512)
+    for _ in range(100):
+        p, q = primality.getFfcPrimes(32, 600)
+        assert primality.millerRabin(p, 100)
+        assert primality.millerRabin(q, 100)
+
+
+def testPrimeFactors():
+    print("testPrimeFactors")
+
+    for _ in range(100):
+        n = base.bytesToInt(base.getRandomBytes(8))
+        factors = primality.primeFactors(n, info=True)
+        m = 1
+        for factor in factors:
+            assert primality.millerRabin(factor, 30)
+            m *= factor
+        assert n == m

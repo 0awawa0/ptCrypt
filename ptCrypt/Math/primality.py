@@ -2,9 +2,10 @@ import random
 from typing import Iterable
 from ptCrypt.Math import base, smallPrimes
 from ptCrypt.Asymmetric.ECC import Curve
+from ptCrypt.Util.keys import FFC_APPROVED_LENGTHS
 from datetime import datetime
 import hashlib
-import math
+import secrets
 
 
 def millerRabin(p: int, t: int) -> bool:
@@ -207,7 +208,7 @@ def getPrime(n: int, checks: int = 10) -> int:
         if millerRabin(num, checks): return num
 
 
-def primeFactors(n: int) -> list:
+def primeFactors(n: int, knownFactors: list = [], info: bool = False) -> list:
     """Naive integer factorization function. Extremely slow.
 
     The fucntion first checks if the number is prime with 10 Miller-Rabin tests,
@@ -225,22 +226,113 @@ def primeFactors(n: int) -> list:
             all factors of n
     """
     if millerRabin(n, 10): return [n]
+    if info: totalTime = datetime.now()
 
-    factors = []
-    while n % 2 == 0:
-        factors.append(2)
-        n = n // 2
-    
-    sqRoot = base.iroot(2, n)
-    for i in range(3, sqRoot, 2):
-        while n % i == 0:
-            n = n // i
-            factors.append(i)
-        if n == 1:
-            break
-    if n > 1:
-        factors.append(n)
-    return factors
+    factors = knownFactors[:]
+    try:
+        if info: 
+            print("Checking small primes")
+            start = datetime.now()
+
+        for prime in smallPrimes.SMALL_PRIMES:
+            if n <= prime:
+                if n != 1: factors.append(n)
+                if info: 
+                    end = datetime.now()
+                    print(f"Factors found in {end - totalTime}")
+
+                return factors
+
+            while n % prime == 0:
+                factors.append(prime)
+                n = n // prime
+        if info: 
+            end = datetime.now()
+            print(f"Small primes checked in {end - start}")
+
+        if millerRabin(n, 30):
+            if info:
+                end = datetime.now()
+                print(f"Factors found in {end - totalTime}")
+            factors.append(n)
+            return factors
+
+        if info:
+            start = datetime.now()
+            print("Trying Lenstra method")
+
+        factor = lenstraFactor(n, timeout=5)
+        while factor != None:
+            while n % factor == 0:
+                factors.append(factor)
+                n = n // factor
+            
+            if n == 1:
+                if info:
+                    end = datetime.now()
+                    print(f"Factors found in {end - totalTime}")
+
+            factor = lenstraFactor(n, timeout=5)
+        
+        if info:
+            end = datetime.now()
+            print(f"Finished Lenstra factorization in {end - start}")
+        
+        if millerRabin(n, 30):
+            if info:
+                end = datetime.now()
+                print(f"Factors found in {end - totalTime}")
+            factors.append(n)
+            return factors
+
+        if info:
+            print("Trying Pollard p - 1")
+            start = datetime.now()
+
+        factor = pollardFactor(n)
+        while factor != None:
+            while n % factor == 0:
+                factors.append(factor)
+                n = n // factor
+            
+            if n == 1:
+                if info:
+                    end = datetime.now()
+                    print(f"Factors found in {end - totalTime}")
+                return factors
+            factor = pollardFactor(n)
+
+        if info:
+            end = datetime.now()
+            print(f"Finished Pollard p - 1 in {end - start}")
+
+        if millerRabin(n, 30):
+            if info:
+                end = datetime.now()
+                print(f"Factors found in {end - totalTime}")
+            factors.append(n)
+            return factors
+
+        if info:
+            start = datetime.now()
+            print(f"Trying plain division factorization")
+
+        sqRoot = base.iroot(2, n)
+        for i in range(smallPrimes.SMALL_PRIMES[-1] + 2, sqRoot, 2):
+            while n % i == 0:
+                n = n // i
+                factors.append(i)
+            if n < i: break
+        if n > 1:
+            factors.append(n)
+        
+        if info:
+            end = datetime.now()
+            print(f"Factors found in {end - totalTime}")
+        return factors
+    except KeyboardInterrupt:
+        if info: print("Factorization interrupted. Returning current N and list of factors")
+        return (n, factors)
 
 
 def pollardFactor(n, init=2, bound=2**16, numbers: Iterable = smallPrimes.SMALL_PRIMES):
@@ -644,3 +736,249 @@ def ifcProvablePrime(L: int, e: int, firstSeed: int, N1: int = 1, N2: int = 1, h
         # Steps 20, 21
         if pGenCounter >= 5 * L: return None
         t += 1
+
+
+def getFfcPrimes(N: int, L: int) -> tuple:
+    """Generates two primes for FFC. Generates provable primes for L <= 512 and probable primes for L > 512
+
+    Parameters:
+        N: int
+            smaller prime bit length
+        
+        L: int
+            bigger prime bit length
+    
+    Returns:
+        result: tuple
+            Returns pair of numbers (q, p) where q divides (p - 1). May return None if generation fails or N >= L.
+    """
+
+    if N >= L: return None
+
+    if L <= 512:
+        res = None
+        tries = 0
+        while not res and tries < 1000:
+            res = getProvablePrimesForFFC(N, L)
+            tries += 1
+        return res
+    else:
+        res = None
+        tries = 0
+        while not res and tries < 1000:
+            res = getProbablePrimesForFfc(N, L)
+            tries += 1
+        return res
+
+def getProbablePrimesForFfc(N: int, L: int) -> tuple:
+    """Generates probable primes p and q by algorithm from
+    FIPS 186-4, Appendix A.1.1.2
+
+    This is the simplified version of generation function. It does not perform
+    any checks and doesn't allow you to change parameters except for the primes lengths.
+    Full version of this method you can find in Asymmetric.DSA.generateProbablePrimes
+
+    Parameters:
+        N: int
+            Bit length of q - smaller prime
+            
+        L: int
+            Bit length of p - bigger prime
+            
+        seedLength: int
+            Bit length of seed, must not be less than N
+            
+        hashFunction: callable
+            Hash function conforming to hashlib protocols. By default hashlib.sha256 is used
+            Hash function output length must not be less than N. 
+            By FIPS 186-4 one of APPROVED_HASHES should be used
+        
+        forceWeak: bool
+            Indicates if N and L should be verified to be approved by the standard. False by default.
+
+    Returns:
+        result: tuple
+            Tuple of generated parameters:
+                1. status: bool
+                    True if generation was successful and False otherwise
+                
+                2. p: int
+                    Bigger prime
+                
+                3. q: int
+                    Smaller prime
+                
+                4. domainParameterSeed: int
+                    Seed for for primes verification
+                
+                5. counter: int
+                    Counter for primes verification
+    """
+
+    if (N, L) == FFC_APPROVED_LENGTHS[0]:
+        pTests = 3
+        qTests = 19
+    elif (N, L) == FFC_APPROVED_LENGTHS[1]:
+        pTests = 3
+        qTests = 24
+    elif (N, L) == FFC_APPROVED_LENGTHS[2]:
+        pTests = 3
+        qTests = 27
+    else:
+        pTests = 2
+        qTests = 27
+
+    outlen = hashlib.sha256().digest_size * 8
+    if outlen < N: return None
+
+    #   n = ceil(L / outlen) - 1
+    if L % outlen == 0: n = L // outlen - 1
+    else: n = L // outlen
+
+    b = L - 1 - (n * outlen)
+
+    # Some precalculated powers of two, so we dont calculate it on each iteration
+    twoPowNMin1 = pow(2, N - 1)  # 2^(N - 1)
+    twoPowSeedLength = pow(2, N)  # 2^seedlen
+    twoPowOutLength = pow(2, outlen)  # 2^outlen
+    twoPowLMin1 = pow(2, L - 1)  # 2^(L - 1)
+    twoPowB = pow(2, b)  # 2^b
+
+    while 1:
+        while 1:
+            domainParameterSeed = secrets.randbits(N) | 2 ** (N - 1)
+
+            U = base.bytesToInt(hashlib.sha256(base.intToBytes(domainParameterSeed)).digest()) % twoPowNMin1
+
+            q = twoPowNMin1 + U + 1 - (U % 2)
+
+            if millerRabin(q, qTests):
+                if lucasTest(q): break
+
+        # Precalcualted value, to not calculate it in the loop
+        twoTimesQ = 2 * q
+        offset = 1
+        for counter in range(0, 4 * L):
+
+            W = 0
+            for j in range(0, n):
+                #   Vj = Hash((domain_parameter_seed + offset + j) mod 2^seedlen)
+                hashPayload = base.intToBytes((domainParameterSeed + offset + j) % twoPowSeedLength)
+                v = base.bytesToInt(hashlib.sha256(hashPayload).digest())
+
+                # W = sum(Vj * 2^(j * outlen))
+                W += v * pow(twoPowOutLength, j)
+
+            # Last term of W calculation
+            #   Vj = Hash((domain_parameter_seed + offset + j) % 2^seedlen)
+            hashPayload = base.intToBytes((domainParameterSeed + offset + n) % twoPowSeedLength)
+            v = int(base.bytesToInt(hashlib.sha256(hashPayload).digest()) % twoPowB)
+
+            #   W += (Vn mod 2^b) * 2^(n * outlen)
+            W += v * pow(twoPowOutLength, n)
+
+            X = W + twoPowLMin1
+            c = X % twoTimesQ
+            p = X - (c - 1)
+            if p >= twoPowLMin1:
+                if millerRabin(p, pTests):
+                    if lucasTest(p):
+                        return (p, q)
+
+            # Step 11.9
+            offset = offset + n + 1
+
+    return None
+
+def getProvablePrimesForFFC(N: int, L: int) -> tuple:
+    """Generates provabele primes p and q by algorithm from
+    FIPS 186-4, Appendix A.1.2.1.2. This is the simplified implementation, that just generates primes.
+    This function does not perform any checks and doesn't allow you to change parameters. Full version
+    is in Asymmetric.DSA.generateProvablePrimes.
+
+    Parameters:
+        N: int
+            Bit length of q - smaller prime
+        
+        L: int
+            Bit length of p - bigger prime
+
+    Returns:
+        result: tuple
+            primes p and q. Might return None on generation fail, 
+            if it does, try running the function again.
+    """
+    firstSeed = 0
+
+    twoPowNMin1 = pow(2, N - 1)
+    while firstSeed < twoPowNMin1: 
+        firstSeed = secrets.randbits(N)
+        firstSeed |= (2 ** (N - 1) + 1)
+
+
+    d = shaweTaylor(N, firstSeed)
+    if not d["status"]: return None
+
+    q = d["prime"]
+    qSeed = d["primeSeed"]
+    qGenCounter = d["primeGenCounter"]
+
+    # Step 3
+    #   p0Length = ceil(L / 2 + 1)
+    if L % 2 == 0: p0Length = L // 2 + 1
+    else: p0Length = L // 2 + 2
+
+    d = shaweTaylor(p0Length, qSeed)
+    if not d["status"]: return None
+
+    p0 = d["prime"]
+    pSeed = d["primeSeed"]
+    pGenCounter = d["primeGenCounter"]
+
+    outlen = hashlib.sha256().digest_size * 8
+
+    if L % outlen == 0: iterations = L // outlen - 1
+    else: iterations = L // outlen
+
+    oldCounter = pGenCounter
+
+    twoPowOutlen = pow(2, outlen)
+    twoPowLMin1 = pow(2, L - 1)
+
+    x = 0
+    for i in range(iterations + 1):
+        hashPayload = base.intToBytes(pSeed + i)
+        h = base.bytesToInt(hashlib.sha256(hashPayload).digest())
+
+        x = x + h * pow(twoPowOutlen, i)
+    
+    pSeed = pSeed + iterations + 1
+    x = twoPowLMin1 + (x % twoPowLMin1)
+
+    #   t = ceil(x / (2 * q * p0))
+    if x % (2 * q * p0) == 0: t = x // (2 * q * p0)
+    else: t = x // (2 * q * p0) + 1
+
+    while True:
+
+        if 2 * t * q * p0 + 1 > twoPowLMin1 * 2: t = twoPowLMin1 // (2 * q * p0) + (twoPowLMin1 % (2 * q * p0) != 0)
+
+        p = 2 * t * q * p0 + 1
+        pGenCounter += 1
+
+        a = 0
+        for i in range(iterations + 1):
+            hashPayload = base.intToBytes(pSeed + i)
+            h = base.bytesToInt(hashlib.sha256(hashPayload).digest())
+            a = a + h * pow(twoPowOutlen, i)
+    
+        pSeed = pSeed + iterations + 1
+        a = 2 + (a % (p - 3))
+        z = pow(a, 2 * t * q, p)
+
+        if 1 == base.gcd(z - 1, p) and 1 == pow(z, p0, p): return (p, q)    
+        if pGenCounter > (4 * L + oldCounter): return None
+
+        t += 1
+
+

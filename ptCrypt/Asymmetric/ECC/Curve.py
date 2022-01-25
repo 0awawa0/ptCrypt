@@ -31,10 +31,7 @@ class Curve:
                     low = low % self.curve.p
                     r, a, b = base.egcd(low, self.curve.p)
 
-                    if r != 1:
-                        print(
-                            f"[WARNING] Failed to add {self} and {other} for curve {self.curve}. {low} does not have inverse modulo {self.curve.p}. GCD is {r}")
-                        return r
+                    if r != 1: return r
 
                     l = (other.y - self.y) * a % self.curve.p
                 else:
@@ -46,10 +43,7 @@ class Curve:
                     low = low % self.curve.p
 
                     r, a, b = base.egcd(low % self.curve.p, self.curve.p)
-                    if r != 1:
-                        print(
-                            f"[WARNING] Failed to add {self} and {other} for curve {self.curve}. {low} does not have inverse modulo {self.curve.p}. GCD is {r}")
-                        return r
+                    if r != 1: return r
 
                     l = (3 * pow(self.x, 2) + self.curve.a) * a % self.curve.p
                 else:

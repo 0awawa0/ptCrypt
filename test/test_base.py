@@ -92,3 +92,25 @@ def testCrt():
         assert solution == crtResult
 
     print(f"\tAverage time: {sum(times) / len(times)} microseconds")
+
+
+def testGetGenerator():
+    print("testGetGenerator")
+
+    for _ in range(100):
+        p, q = primality.getFfcPrimes(32, 512)
+        g = base.getGenerator(p, q)
+        assert pow(g, q, p) == 1
+
+
+def testGetPrimitiveRoot():
+    print("testGetPrimitiveRoot")
+    
+    for _ in range(100):
+        p, q = primality.getFfcPrimes(64, 128)
+        N = (p - 1) // q
+        factors = primality.primeFactors(N)
+        factors.append(q)
+        print(factors)
+        g = base.getPrimitiveRoot(p, factors)
+        assert pow(g, p - 1, p) == 1

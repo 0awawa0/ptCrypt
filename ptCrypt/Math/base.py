@@ -1,5 +1,4 @@
 import secrets
-from ptCrypt.Math.smallPrimes import SMALL_PRIMES
 
 
 def gcd(n: int, m: int) -> int:
@@ -357,3 +356,57 @@ def crt(coeffs: list, mods: list) -> int:
         currMod *= newMod
     
     return currX % currMod
+
+
+def getGenerator(p: int, q: int, seed: int = 2, update: callable = lambda x: x + 1) -> int:
+    """For given two primes p and q such that q | (p - 1), 
+    this function generates generator g of subgroup of order q in the finite group modulo p. 
+    This function might be useful for implementing FFC, although there might be ananlogues
+    of this function for a particular algorithm. For example, for DSA there are two appropriate functions
+    in Asymmetric.DSA module.
+
+    Parameters:
+        p: int
+            Bigger prime
+        
+        q: int
+            Smaller prime
+    
+        seed: int
+            Initial seed. 2 by default
+        
+        update: callable
+            seed update function. 
+            If current seed turned out to be inappropriate this function should generate new seed given the old one
+            By default it returns seed + 1
+    
+    Returns:
+        result: int
+            Generator of subgroup of order q modulo p.
+    """
+
+    e = (p - 1) // q
+    while 1:
+        g = pow(seed, e, p)
+        if g != 1: break
+
+        seed = update(seed)
+    
+    return g
+
+
+def getPrimitiveRoot(p: int, factors: list) -> int:
+    
+    seed = 2
+    while True:
+        if pow(seed, p - 1, p) != 1:
+            seed += 1
+        
+        isGenerator = True
+        for factor in factors:
+            if pow(seed, factor, p) == 1:
+                isGenerator = False
+                break
+        if isGenerator: return seed
+        
+        seed += 1
