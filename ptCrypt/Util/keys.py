@@ -56,7 +56,7 @@ def getFFCSecurityLevel(N: int, L: int) -> int:
             Associated security level
     """
 
-    if (N, L) not in FFC_APPROVED_LENGTHS: return 0
+    if (N, L) not in FFC_APPROVED_LENGTHS: return 40
     elif (N, L) == FFC_APPROVED_LENGTHS[0]: return 80
     elif (N, L) == FFC_APPROVED_LENGTHS[1]: return 112
     elif (N, L) == FFC_APPROVED_LENGTHS[2]: return 128
@@ -81,7 +81,7 @@ def getIFCSecurityLevel(N: int) -> int:
             Associated security level
     """
 
-    if N not in IFC_APPROVED_LENGTHS: return 0
+    if N not in IFC_APPROVED_LENGTHS: return 40
     elif N == IFC_APPROVED_LENGTHS[0]: return 80
     elif N == IFC_APPROVED_LENGTHS[1]: return 112
     elif N == IFC_APPROVED_LENGTHS[2]: return 128
@@ -102,7 +102,7 @@ def getECCSecurityLevel(N: int):
             Associated security level
     """
 
-    if N < ECC_APPROVED_LENGTHS[0]: return 0
+    if N < ECC_APPROVED_LENGTHS[0]: return 40
     elif N in range(ECC_APPROVED_LENGTHS[0], ECC_APPROVED_LENGTHS[1]): return 80
     elif N in range(ECC_APPROVED_LENGTHS[1], ECC_APPROVED_LENGTHS[2]): return 112
     elif N in range(ECC_APPROVED_LENGTHS[2], ECC_APPROVED_LENGTHS[3]): return 128
@@ -191,13 +191,13 @@ def millerRabinTestsForFFC(N: int, L: int) -> int:
             recommended count of tests to apply for both primes
     """
 
-    if (N, L) not in FFC_APPROVED_LENGTHS: return 0
+    if (N, L) not in FFC_APPROVED_LENGTHS: return 64
     if (N, L) == FFC_APPROVED_LENGTHS[0]: return 40
     if (N, L) == FFC_APPROVED_LENGTHS[1]: return 56
     if (N, L) == FFC_APPROVED_LENGTHS[2]: return 56
     if (N, L) == FFC_APPROVED_LENGTHS[3]: return 64
 
-    return 0
+    return 40
 
 
 def millerRabinAndLucasTestsForFFC(N: int, L: int) -> tuple:
@@ -220,12 +220,12 @@ def millerRabinAndLucasTestsForFFC(N: int, L: int) -> tuple:
             prime respectively
     """
 
-    if (N, L) not in FFC_APPROVED_LENGTHS: return None
+    if (N, L) not in FFC_APPROVED_LENGTHS: return (27, 2)
     if (N, L) == FFC_APPROVED_LENGTHS[0]: return (19, 3)
     if (N, L) == FFC_APPROVED_LENGTHS[1]: return (24, 3)
     if (N, L) == FFC_APPROVED_LENGTHS[2]: return (27, 3)
     if (N, L) == FFC_APPROVED_LENGTHS[3]: return (27, 2)
-    return None
+    return (27, 2)
 
 
 def millerRabinTestsForIFC(N: int, withAuxiliaryPrimes: bool = False) -> tuple:
@@ -250,18 +250,18 @@ def millerRabinTestsForIFC(N: int, withAuxiliaryPrimes: bool = False) -> tuple:
             See FIPS 186-4, Appendix B.3. to find out more about p1, p2, q1 and q2.
     """
 
-    if N not in IFC_APPROVED_LENGTHS: return None
+    if N not in IFC_APPROVED_LENGTHS: return (64, 0)
 
     if withAuxiliaryPrimes:
         if N == IFC_APPROVED_LENGTHS[0]: return (5, 28)
         if N == IFC_APPROVED_LENGTHS[1]: return (5, 38)
         if N >= IFC_APPROVED_LENGTHS[2]: return (4, 41)
-        return None
+        return (4, 41)
     else:
         if N == IFC_APPROVED_LENGTHS[0]: return (40, 0)
         if N == IFC_APPROVED_LENGTHS[1]: return (56, 0)
         if N == IFC_APPROVED_LENGTHS[2]: return (64, 0)
-        return None
+        return (64, 0)
 
 
 def getIFCAuxiliaryPrimesLegths(N: int, probablePrimes: bool = False) -> tuple:
@@ -295,7 +295,7 @@ def getIFCAuxiliaryPrimesLegths(N: int, probablePrimes: bool = False) -> tuple:
         elif N == IFC_APPROVED_LENGTHS[4]:
             return (random.randint(511, 7661 // 2), random.randint(511, 7661 // 2))
         else:
-            return None
+            return (random.randint(N // 5, N // 3), random.randint(N // 5, N // 3))
     else:
         if N == IFC_APPROVED_LENGTHS[0]:
             return (random.randint(101, 239 // 2), random.randint(101, 239 // 2))
@@ -308,4 +308,4 @@ def getIFCAuxiliaryPrimesLegths(N: int, probablePrimes: bool = False) -> tuple:
         elif N == IFC_APPROVED_LENGTHS[4]:
             return (random.randint(511, 3819 // 2), random.randint(511, 3820 // 2))
         else:
-            return None
+            return (random.randint(N // 5, N // 3), random.randint(N // 5, N // 3))

@@ -7,7 +7,7 @@ from ptCrypt.Util.keys import IFC_APPROVED_LENGTHS, getIFCSecurityLevel, millerR
 from secrets import randbits
 
 
-def getSeed(N: int) -> int:
+def getSeed(N: int, forceWeak: bool = False) -> int:
     """Returns seed appropriate for provable primes generation
     according to algorithm from NIST FIPS 186-4, Appendix B.3.2.1.
     This function uses OS random generator, which is supposed to 
@@ -16,18 +16,20 @@ def getSeed(N: int) -> int:
     Parameters:
         N: int
             key bit length
-    
+        
+        forceWeak: bool
+            Indicates wether to disable input parameters' weakness check. False by default.
     Returns:
         seed: int
             seed to use for provable primes generation
     """
 
-    if N not in IFC_APPROVED_LENGTHS: return None
+    if N not in IFC_APPROVED_LENGTHS and not forceWeak: return None
     secLvl = getIFCSecurityLevel(N)
     return randbits(2 * secLvl) | 2 ** (2 * secLvl- 1)
 
 
-def generateProvablePrimes(e: int, N: int, seed: int) -> tuple:
+def generateProvablePrimes(e: int, N: int, seed: int, forceWeak: bool = False) -> tuple:
     """Generates provably prime numbers p and q for RSA.
     The algorithm is specified by FIPS 186-4, Appendix B.3.2.2.
     Note that FIPS 186-4 only allows N to be 2048 or 3072. This function, however,
@@ -44,6 +46,9 @@ def generateProvablePrimes(e: int, N: int, seed: int) -> tuple:
             random seed to use for primes generation, 
             use getSeed function to get this value
     
+        forceWeak: bool
+            Indicates wether to disable input parameters' weakness check. False by default.
+
     Returns:
         result: tuple
             generated primes p and q, or None. 
@@ -53,11 +58,12 @@ def generateProvablePrimes(e: int, N: int, seed: int) -> tuple:
     """
 
     # Steps 1, 2, 3 and 4
-    if N < 2048: return None
-    if N not in IFC_APPROVED_LENGTHS: return None
-    if e <= 2**16 or e >= 2**256 or e % 2 == 0: return None
-    securityStrength = getIFCSecurityLevel(N)
-    if seed.bit_length() != 2 * securityStrength: return None
+    if not forceWeak:
+        if N < 2048: return None
+        if N not in IFC_APPROVED_LENGTHS: return None
+        if e <= 2**16 or e >= 2**256 or e % 2 == 0: return None
+        securityStrength = getIFCSecurityLevel(N)
+        if seed.bit_length() != 2 * securityStrength: return None
 
     # Step 5
     workingSeed = seed
@@ -93,7 +99,7 @@ def generateProvablePrimes(e: int, N: int, seed: int) -> tuple:
     return (p, q)
 
 
-def generateProbablePrimes(e: int, N: int) -> tuple:
+def generateProbablePrimes(e: int, N: int, forceWeak: bool = False) -> tuple:
     """Generates probably prime numbers p and q for RSA.
     The algorithm is specified by FIPS 186-4, Appendix B.3.3.
     Note that FIPS 186-4 only allows N to be 2048 or 3072. This function, however,
@@ -106,6 +112,9 @@ def generateProbablePrimes(e: int, N: int) -> tuple:
         N: int
             required key size, which is the modulus size for IFC.
     
+        forceWeak: bool
+            Indicates wether to disable input parameters' weakness check. False by default.
+    
     Returns:
         result: tuple
             generated primes p and q, or None. 
@@ -115,9 +124,10 @@ def generateProbablePrimes(e: int, N: int) -> tuple:
     """
 
     # Steps 1, 2
-    if N < 2048: return None
-    if N not in IFC_APPROVED_LENGTHS: return None
-    if e<= 2**16 or e >= 2**256 or e % 2 == 0: return None
+    if not forceWeak:
+        if N < 2048: return None
+        if N not in IFC_APPROVED_LENGTHS: return None
+        if e<= 2**16 or e >= 2**256 or e % 2 == 0: return None
 
     testsCount = millerRabinTestsForIFC(N)[0]
     
@@ -190,7 +200,6 @@ def geneareteProvablePrimesWithConditions(e: int, N: int, seed: int) -> tuple:
     # Steps 1, 2
     if N not in IFC_APPROVED_LENGTHS: return None
     if e <= 2 ** 16 or e >= 2 ** 256: return None
-
     # Steps 3, 4
     securityLevel = getIFCSecurityLevel(N)
     if seed.bit_length() != 2 * securityLevel: return None
@@ -248,6 +257,9 @@ def generateProbablePrimesWithConditions(e: int, N: int, seed: int, probablePrim
             specifies which algorithm to use:
                 True -> Appendix B.3.6.
                 False -> Appendix B.3.5.
+            
+        forceWeak: bool
+            Indicates wether to disable input parameters' weakness check. False by default.
     
     Returns:
         result: tuple
@@ -255,7 +267,7 @@ def generateProbablePrimesWithConditions(e: int, N: int, seed: int, probablePrim
             if generation fails when probablePrimes is set to False. If parameters are fine, try using different seed.
     """
 
-    # Steps 1, 2
+    # Steps 1, 2    
     if N not in IFC_APPROVED_LENGTHS: return None
     if e <= 2 ** 16 or e >= 2 ** 256: return None
 
@@ -910,6 +922,7 @@ def ssaPssSign(d: int, n: int, message: bytes, hashFunction: callable = hashlib.
             RSASSA-PSS signature
     """
 
+    k = base.byteLength(n)
     modBits = n.bit_length()
 
     hashLength = hashFunction().digest_size
@@ -922,7 +935,7 @@ def ssaPssSign(d: int, n: int, message: bytes, hashFunction: callable = hashlib.
     m = base.bytesToInt(em)
     s = sign(d, n, m)
     
-    return base.intToBytes(s)
+    return base.intToBytes(s, k)
 
 
 def ssaPssVerify(e: int, n: int, message: bytes, signature: bytes, hashFunction: callable = hashlib.sha256) -> bool:
@@ -965,3 +978,175 @@ def ssaPssVerify(e: int, n: int, message: bytes, signature: bytes, hashFunction:
     saltLength = emLength - hashLength - 2
 
     return emsaPssVerify(message, em, modBits - 1, saltLength, hashFunction)
+
+
+def emsaPkcs1v15Encode(message: bytes, emLength: int, hashFunction: callable = hashlib.sha256) -> bytes:
+    """EMSA-PKCS1-v1_5 encoding method implementation by PKCS#1, Section 9.2
+
+    Parameters:
+        message: bytes
+            Message to encode
+        
+        emLength: int
+            Desired length of the encoded message
+        
+        hashFunction: callable
+            hash function to use. 
+            Must be one of {hashlib.md5, hashlib.sha1, hashlib.sha256, hashlib.sha384, hashlib.sha512}
+        
+    Returns:
+        em: bytes
+            Encoded message. Might return null if hashfunction is not appropriate, or if emLength is too small
+    """
+
+    derHeader = None
+    if hashFunction == hashlib.md5:
+        derHeader = b"\x30\x20\x30\x0c\x06\x08\x2a\x86\x48\x86\xf7\x0d\x02\x05\05\x00\x04\x10"
+    elif hashFunction == hashlib.sha1:
+        derHeader = b"\x30\x21\x30\x09\x06\x05\x2b\x0e\x03\x02\x1a\x05\x00\x04\x14"
+    elif hashFunction == hashlib.sha256:
+        derHeader = b"\x30\x31\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x01\x05\x00\x04\x20"
+    elif hashFunction == hashlib.sha384:
+        derHeader = b"\x30\x41\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x02\x05\x00\x04\x30"
+    elif hashFunction == hashlib.sha512:
+        derHeader = b"\x30\x51\x30\x0d\x06\x09\x60\x86\x48\x01\x65\x03\x04\x02\x03\x05\x00\x04\x40"
+    else:
+        return None
+    
+    h = hashFunction(message).digest()
+    T = derHeader + h
+    tLength = len(T)
+    if emLength < tLength + 11: return None
+    
+    ps = b"\xff" * (emLength - tLength - 3)
+    em = b"\x00\x01" + ps + b"\x00" + T
+
+    return em
+
+
+def ssaPkcs1v15Sign(d: int, n: int, message: bytes, hashFunction: callable = hashlib.sha256) -> bytes:
+    """RSASSA-PKCS1-v1_5-SIGN method implementation by PKCS#1, Section 8.2.1
+
+    Parameters:
+        d: int
+            RSA private exponent
+        
+        n: int
+            RSA modulus
+        
+        message: bytes
+            Message to sign
+        
+        hashFunction: callable
+            Hash function to use.
+            Must be one of {hashlib.md5, hashlib.sha1, hashlib.sha256, hashlib.sha384, hashlib.sha512}
+
+    Returns:
+        signature: bytes
+            Signature of the message or Null, if n is too small, hash function is not appropriate or
+            RSA.sign returns None
+    """
+
+    k = base.byteLength(n)
+    em = emsaPkcs1v15Encode(message, k, hashFunction=hashFunction)
+    if em == None: return None
+    m = base.bytesToInt(em)
+    s = sign(d, n, m)
+    if s == None: return None
+    return base.intToBytes(s, k)
+
+
+def ssaPkcs1V15Verify(e: int, n: int, message: bytes, signature: bytes, hashFunction: callable = hashlib.sha256) -> bool:
+    """RSASSA-PKCS1-V1_5-VERIFY method implementation by PKCS#1, Section 8.2.2
+
+    Parameters:
+        e: int
+            RSA public exponent
+        
+        n: int
+            RSA modulus
+        
+        message: bytes
+            Message corresponding to a signature
+        
+        signature: bytes
+            Signature to check
+        
+        hashFunction: callable
+            Hash function used for signature generation.
+    
+    Returns:
+        result: bool
+            True if the signature is correct and False otherwise.
+    """
+
+    k = base.byteLength(n)
+    if len(signature) != k: return False
+
+    s = base.bytesToInt(signature)
+    m = verify(e, n, s)
+    em_ = base.intToBytes(m, k)
+    em = emsaPkcs1v15Encode(message, k, hashFunction)
+    return em_ == em
+
+
+def getParameters(N: int, forceWeak: bool = False) -> tuple:
+    """Simple RSA parameters generation
+    
+    Parameters:
+        N: int
+            required modulus bit length
+        
+        forceWeak: bool
+            indicates if weakness check should be checked to be approved length by FIPS standard. False by default
+
+    """
+
+    if N < 1024:
+        e = None
+        res = None
+        while not res:
+            e = primality.getPrime(17)
+            seed = getSeed(N, forceWeak=forceWeak)
+            res = generateProvablePrimes(e, N, seed, forceWeak=forceWeak)
+            if res != None:
+                p, q = res
+                f = (p - 1) * (q - 1)
+                if base.gcd(e, f) != 1:
+                    res = None
+        n = p * q
+        d = (base.egcd(e, f)[1]) % f
+        return (e, d, n, p, q)
+
+    elif N in IFC_APPROVED_LENGTHS:
+        e = None
+        res = None
+        while not res:
+            e = primality.getPrime(17)
+            seed = getSeed(N)
+            res = geneareteProvablePrimesWithConditions(e, N, seed)
+            if res != None:
+                p, q = res
+                f = (p - 1) * (q - 1)
+                if base.gcd(e, f) != 1:
+                    res = None
+        
+        n = p * q
+        d = (base.egcd(e, f)[1]) % f
+        return (e, d, n, p, q)
+    else:
+        e = None
+        res = None
+        while not res:
+            e = primality.getPrime(17)
+            seed = getSeed(N, forceWeak=forceWeak)
+            res = generateProbablePrimes(e, N, seed, forceWeak=forceWeak)
+            if res != None:
+                p, q = res
+                f = (p - 1) * (q - 1)
+                if base.gcd(e, f) != 1:
+                    res = None
+        
+        n = p * q
+        d = (base.egcd(e, f)[1]) % f
+        return (e, d, n, p, q)

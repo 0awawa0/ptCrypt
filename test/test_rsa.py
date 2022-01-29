@@ -1,4 +1,5 @@
 from hashlib import sha256
+import hashlib
 import os
 import random
 from ptCrypt.Math import base
@@ -15,39 +16,26 @@ def testGenerateProvablePrimes():
     N = 2048
     testsCount = millerRabinTestsForIFC(N)[0]
     
-    t = []
-    for _ in range(1):
-        start = datetime.now()
+    for _ in range(5):
         seed = RSA.getSeed(N)
         res = None
         while not res:
             seed = RSA.getSeed(N)
             res = RSA.generateProvablePrimes(e, N, seed)
-        t.append((datetime.now() - start).seconds)
         
         p, q = res
         assert millerRabin(p, testsCount) and millerRabin(q, testsCount)
-    
-    avg = sum(t) / len(t)
-    print(avg)
-    N = 3072
-    testsCount = millerRabinTestsForIFC(N)[0]
-    
-    t = []
-    for _ in range(1):
-        start = datetime.now()
-        seed = RSA.getSeed(N)
+
+    N = 512
+    for _ in range(5):
+        seed = RSA.getSeed(N, forceWeak=True)
         res = None
         while not res:
-            seed = RSA.getSeed(N)
-            res = RSA.generateProvablePrimes(e, N, seed)
-        t.append((datetime.now() - start).seconds)
-
+            seed = RSA.getSeed(N, forceWeak=True)
+            res = RSA.generateProvablePrimes(e, N, seed, forceWeak=True)
+        
         p, q = res
         assert millerRabin(p, testsCount) and millerRabin(q, testsCount)
-    
-    avg = sum(t) / len(t)
-    print(avg)
 
 
 def testGenerateProbablePrimes():
@@ -56,36 +44,21 @@ def testGenerateProbablePrimes():
     e = 65537
     N = 2048
     testsCount = millerRabinTestsForIFC(N)[0]
-    print("Test count: ", testsCount)
 
-    t = []
     for _ in range(1):
-        start = datetime.now()
         res = RSA.generateProbablePrimes(e, N)
         assert res
-        t.append((datetime.now() - start).seconds)
         
         p, q = res
         assert millerRabin(p, testsCount) and millerRabin(q, testsCount)
     
-    avg = sum(t) / len(t)
-    print(avg)
-    N = 3072
-    testsCount = millerRabinTestsForIFC(N)[0]
-    print("Test count: ", testsCount)
-
-    t = []
-    for _ in range(1):
-        start = datetime.now()
-        res = RSA.generateProbablePrimes(e, N)
+    N = 512
+    for _ in range(5):
+        res = RSA.generateProbablePrimes(e, N, forceWeak=True)
         assert res
-        t.append((datetime.now() - start).seconds)
 
         p, q = res
         assert millerRabin(p, testsCount) and millerRabin(q, testsCount)
-    
-    avg = sum(t) / len(t)
-    print(avg)
 
 
 def testGenerateProvablePrimesWithConditions():
@@ -95,60 +68,29 @@ def testGenerateProvablePrimesWithConditions():
     N = 1024
     testsCount = millerRabinTestsForIFC(N)[0]
     
-    t = []
     for _ in range(1):
-        start = datetime.now()
         seed = RSA.getSeed(N)
         res = None
         while not res:
             seed = RSA.getSeed(N)
             res = RSA.geneareteProvablePrimesWithConditions(e, N, seed)        
-            t.append((datetime.now() - start).microseconds)
         
         p, q = res
         assert millerRabin(p, testsCount) and millerRabin(q, testsCount)
-        
-    avgTime = sum(t) / len(t)
-    print(N, avgTime)
-
-    e = 65537
-    N = 2048
-    testsCount = millerRabinTestsForIFC(N)[0]
-    
-    t = []
-    for _ in range(1):
-        start = datetime.now()
-        seed = RSA.getSeed(N)
-        res = None
-        while not res:
-            seed = RSA.getSeed(N)
-            res = RSA.geneareteProvablePrimesWithConditions(e, N, seed)
-        t.append((datetime.now() - start).seconds)
-        
-        p, q = res
-        assert millerRabin(p, testsCount) and millerRabin(q, testsCount)
-    
-    avgTime = sum(t) / len(t)
-    print(N, avgTime)
 
     e = 65537
     N = 3072
     testsCount = millerRabinTestsForIFC(N)[0]
     
-    t = []
     for _ in range(1):
-        start = datetime.now()
         seed = RSA.getSeed(N)
         res = None
         while not res:
             seed = RSA.getSeed(N)
             res = RSA.geneareteProvablePrimesWithConditions(e, N, seed)
-        t.append((datetime.now() - start).seconds)
         
         p, q = res
         assert millerRabin(p, testsCount) and millerRabin(q, testsCount)
-    avgTime = sum(t) / len(t)
-    print(N, avgTime)
 
 
 def testGenerateProbablePrimesWithAuxiliaryPrimes():
@@ -158,11 +100,9 @@ def testGenerateProbablePrimesWithAuxiliaryPrimes():
 
     for N in IFC_APPROVED_LENGTHS[:3]:
         testsCount = millerRabinTestsForIFC(N, False)[0]
-        t = []
         p1Len, p2Len = getIFCAuxiliaryPrimesLegths(N, probablePrimes=False)
         for _ in range(1):
             while True:
-                start = datetime.now()
                 seed = RSA.getSeed(N)
                 res = shaweTaylor(p1Len, seed)
                 if not res["status"]: continue
@@ -177,13 +117,9 @@ def testGenerateProbablePrimesWithAuxiliaryPrimes():
 
                 p = RSA.generateProbablePrimeWithAuxiliaryPrimes(p1, p2, N, e)
                 if not p: continue
-                end = datetime.now()
-                t.append((end - start).microseconds / 1000)
 
                 assert millerRabin(p[0], testsCount)
                 break
-        avg = sum(t) / len(t)
-        print(N, avg)
 
 
 def testGenerateProbablePrimesWithConditions():
@@ -226,7 +162,7 @@ def testOAEPEncryptionAndDecryption():
     for N in IFC_APPROVED_LENGTHS[:1]:
         print(N)
 
-        for _ in range(100):
+        for _ in range(10):
             res = None
             while res == None:
                 seed = RSA.getSeed(N)
@@ -250,7 +186,7 @@ def testPKCS1V15EncryptionAndDecryption():
     e = 65537
     for N in IFC_APPROVED_LENGTHS[:1]:
         
-        for _ in range(100):
+        for _ in range(10):
             res = None
             while res == None:
                 seed = RSA.getSeed(N)
@@ -272,7 +208,7 @@ def testPKCS1V15EncryptionAndDecryption():
 def testEMSAPSSEncodeAndVerify():
     print("testEMSA-PSSEncodeAndVerify")
 
-    for _ in range(100):
+    for _ in range(10):
         messageLength = random.randint(10, 100)
         message = base.getRandomBytes(messageLength)
         em = RSA.emsaPssEncode(message, len(message) * 128, 16)
@@ -295,8 +231,90 @@ def testRSASSASignAndVerify():
     d = pow(e, -1, f)
     n = p * q
 
-    for _ in range(1000):
+    for _ in range(10):
         messageLenngth = base.byteLength(n)
         message = base.getRandomBytes(messageLenngth)
         signature = RSA.ssaPssSign(d, n, message)
         assert RSA.ssaPssVerify(e, n, message, signature)
+
+
+def testEmsaPkcs1v15Encode():
+    print("testEmsaPkcs1v15Encode")
+
+    e = 65537
+    N = IFC_APPROVED_LENGTHS[0]
+    res = None
+    while res == None:
+        seed = RSA.getSeed(N)
+        res = RSA.generateProbablePrimesWithConditions(e, N, seed, True)
+    
+    p, q = res
+    f = (p - 1) * (q - 1)
+    d = pow(e, -1, f)
+    n = p * q
+
+    for _ in range(10):
+        messageLength = base.byteLength(n)
+        message = base.getRandomBytes(messageLength)
+        em = RSA.emsaPkcs1v15Encode(message, messageLength)
+        assert em != None
+
+
+def testSsaPkcs1V15SignAndVerify():
+    print("testSsaPkcs1V15SignAndVerify")
+
+    e = 65537
+    N = IFC_APPROVED_LENGTHS[0]
+    res = None
+    while res == None:
+        seed = RSA.getSeed(N)
+        res = RSA.generateProbablePrimesWithConditions(e, N, seed, True)
+    
+    p, q = res
+    f = (p - 1) * (q - 1)
+    d = pow(e, -1, f)
+    n = p * q
+
+    for _ in range(10):
+        messageLength = base.byteLength(n)
+        message = base.getRandomBytes(messageLength)
+        signature = RSA.ssaPkcs1v15Sign(d, n, message)
+        assert RSA.ssaPkcs1V15Verify(e, n, message, signature)
+
+
+def testGetParameters():
+    print("testGetParameters")
+
+    for _ in range(10):
+        e, d, n, p, q = RSA.getParameters(256, forceWeak=True)
+        message = base.bytesToInt(base.getRandomBytes(base.byteLength(n) - 1))
+        
+        encrypted = RSA.encrypt(e, n, message)
+        decrypted = RSA.decrypt(d, n, encrypted)
+
+        assert message == decrypted
+
+    for _ in range(10):
+        e, d, n, p, q = RSA.getParameters(512, forceWeak=True)
+        message = base.bytesToInt(base.getRandomBytes(base.byteLength(n) - 1))
+        
+        encrypted = RSA.encrypt(e, n, message)
+        decrypted = RSA.decrypt(d, n, encrypted)
+
+        assert message == decrypted
+
+    for _ in range(5):
+        e, d, n, _, _ = RSA.getParameters(1024)
+        maxLength = base.byteLength(n) - 2 * sha256().digest_size - 2
+        message = base.getRandomBytes(maxLength)
+        encrypted = RSA.oaepEncrypt(e, n, message)
+        decrypted = RSA.oaepDecrypt(d, n, encrypted)
+        assert message == decrypted
+    
+    for _ in range(5):
+        e, d, n, _, _ = RSA.getParameters(2048)
+        maxLength = base.byteLength(n) - 2 * sha256().digest_size - 2
+        message = base.bytesToInt(base.getRandomBytes(maxLength))
+        encrypted = RSA.encrypt(e, n, message)
+        decrypted = RSA.decrypt(d, n, encrypted)
+        assert message == decrypted
