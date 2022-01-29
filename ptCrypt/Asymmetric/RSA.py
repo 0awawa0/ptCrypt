@@ -1090,7 +1090,7 @@ def ssaPkcs1V15Verify(e: int, n: int, message: bytes, signature: bytes, hashFunc
     return em_ == em
 
 
-def getParameters(N: int, forceWeak: bool = False) -> tuple:
+def getParameters(N: int) -> tuple:
     """Simple RSA parameters generation
     
     Parameters:
@@ -1107,8 +1107,8 @@ def getParameters(N: int, forceWeak: bool = False) -> tuple:
         res = None
         while not res:
             e = primality.getPrime(17)
-            seed = getSeed(N, forceWeak=forceWeak)
-            res = generateProvablePrimes(e, N, seed, forceWeak=forceWeak)
+            seed = getSeed(N, forceWeak=True)
+            res = generateProvablePrimes(e, N, seed, forceWeak=True)
             if res != None:
                 p, q = res
                 f = (p - 1) * (q - 1)
@@ -1139,8 +1139,8 @@ def getParameters(N: int, forceWeak: bool = False) -> tuple:
         res = None
         while not res:
             e = primality.getPrime(17)
-            seed = getSeed(N, forceWeak=forceWeak)
-            res = generateProbablePrimes(e, N, seed, forceWeak=forceWeak)
+            seed = getSeed(N, forceWeak=True)
+            res = generateProbablePrimes(e, N, seed, forceWeak=True)
             if res != None:
                 p, q = res
                 f = (p - 1) * (q - 1)
