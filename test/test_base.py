@@ -114,3 +114,12 @@ def testGetPrimitiveRoot():
         print(factors)
         g = base.getPrimitiveRoot(p, factors)
         assert pow(g, p - 1, p) == 1
+
+
+def testContinuedFraction():
+    print("testContinuedFraction")
+
+    assert base.continuedFraction(649, 200) == [3, 4, 12, 4]
+    assert base.continuedFraction(4, 9) == [0, 2, 4]
+    assert base.continuedFraction(355, 113) == [3, 7, 16]
+    assert base.continuedFraction(17993, 90581) == [0, 5, 29, 4, 1, 3, 2, 4, 3]

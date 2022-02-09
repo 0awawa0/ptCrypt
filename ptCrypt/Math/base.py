@@ -437,3 +437,70 @@ def getPrimitiveRoot(p: int, factors: list) -> int:
         if isGenerator: return seed
         
         seed += 1
+
+
+def continuedFraction(a: int, b: int, count: int = None) -> list:
+    """Calculates continued fraction representation of rational number a / b
+
+    Details: https://en.wikipedia.org/wiki/Continued_fraction
+
+    Parameters:
+        a: int
+            nomiator of a rational number
+
+        b: int
+            denominator of a rational number
+        
+        count: int
+            required count of coefficients to calculate. 
+            By default None, so funcion will calculate all coefficients
+    
+    Returns:
+        result: list
+            list of coefficients of continued fractions representation: [a0, a1, a2,...]
+    """
+
+    res = []
+    q = a // b
+    r = a % b
+    res.append(q)
+
+    while r != 0:
+        a, b = b, r
+        q = a // b
+        r = a % b
+        res.append(q)
+        if count and len(res) >= count:
+            return res
+
+    return res
+
+
+def getConvergents(coeffs: list) -> list:
+    """Calculates convergents of the continued fraction
+
+    Details: https://en.wikipedia.org/wiki/Continued_fraction
+
+    Parameters:
+        coeffs: list
+            coefficients of continued fractions
+    
+    Returns:
+        result: list
+            list of tuples (nominator, denominator) of continued fraction's convergents
+    """
+
+    convergents = []
+    for i in range(len(coeffs)):
+        if i == 0:
+            n = coeffs[0]
+            d = 1
+        elif i == 1:
+            n = coeffs[0] * coeffs[1] + 1
+            d = coeffs[1]
+        else:
+            n = coeffs[i] * convergents[i - 1][0] + convergents[i - 2][0]
+            d = coeffs[i] * convergents[i - 1][1] + convergents[i - 2][1]
+        
+        convergents.append((n, d))
+    return convergents

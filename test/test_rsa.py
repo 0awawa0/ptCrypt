@@ -3,9 +3,11 @@ import hashlib
 import os
 import random
 from ptCrypt.Math import base
+from ptCrypt.Math import primality
 from ptCrypt.Util.keys import IFC_APPROVED_LENGTHS, millerRabinTestsForIFC, getIFCSecurityLevel, getIFCAuxiliaryPrimesLegths
 from ptCrypt.Asymmetric import RSA
 from ptCrypt.Math.primality import millerRabin, shaweTaylor
+from ptCrypt.Attacks.RSA import privateKeyFactorization, commonModulusAttack, wienerAttack
 from datetime import date, datetime
 
 
@@ -318,3 +320,38 @@ def testGetParameters():
         encrypted = RSA.encrypt(e, n, message)
         decrypted = RSA.decrypt(d, n, encrypted)
         assert message == decrypted
+
+
+def testPrivateKeyFactorization():
+    print("testPrivateKeyFactorization")
+
+    for _ in range(10):
+        e, d, n, p, q = RSA.getParameters(1024)
+        fact = privateKeyFactorization(n, e, d)
+        assert fact == (p, q) or fact == (q, p)
+
+
+def testCommonModulusAttack():
+    print("testCommonModulusAttack")
+    
+    for _ in range(10):
+        e1, d, n, p, q = RSA.getParameters(1024)
+        m = base.bytesToInt(base.getRandomBytes(1024 // 8 - 1))
+        e2 = primality.getPrime(16)
+        c1 = pow(m, e1, n)
+        c2 = pow(m, e2, n)
+        assert m == commonModulusAttack(c1, c2, e1, e2, n)
+
+
+def testWienerAttack():
+    print("testWienerAttack")
+
+    for _ in range(50):
+        d, e, n, p, q = RSA.getParameters(1024)
+        m = base.bytesToInt(base.getRandomBytes(1024 // 8 - 1))
+        c = pow(m, e, n)
+        d_ = wienerAttack(n, e)
+        assert d == d_
+        assert pow(c, d_, n) == m
+    
+    
