@@ -7,7 +7,7 @@ from ptCrypt.Math import primality
 from ptCrypt.Util.keys import IFC_APPROVED_LENGTHS, millerRabinTestsForIFC, getIFCSecurityLevel, getIFCAuxiliaryPrimesLegths
 from ptCrypt.Asymmetric import RSA
 from ptCrypt.Math.primality import millerRabin, shaweTaylor
-from ptCrypt.Attacks.RSA import privateKeyFactorization, commonModulusAttack, wienerAttack
+from ptCrypt.Attacks.RSA import privateKeyFactorization, commonModulusAttack, wienerAttack, hastadAttack
 from datetime import date, datetime
 
 
@@ -353,5 +353,25 @@ def testWienerAttack():
         d_ = wienerAttack(n, e)
         assert d == d_
         assert pow(c, d_, n) == m
-    
-    
+
+
+def testHastadAttack():
+    print("testHastadAttack")
+
+    for _ in range(10):
+        e = 3
+        message = base.bytesToInt(base.getRandomBytes(1024 // 8 - 1))
+        modules = []
+        ciphertexts = []
+
+        for _ in range(e):
+            p, q = RSA.generateProbablePrimes(e, 1024, forceWeak=True)
+            n = p * q
+            modules.append(n)
+            ciphertexts.append(pow(message, e, n))
+
+        start = datetime.now()
+        m = hastadAttack(ciphertexts, modules, e)
+        end = datetime.now()
+
+        assert message == m

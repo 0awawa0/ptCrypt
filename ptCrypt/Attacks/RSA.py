@@ -107,3 +107,32 @@ def wienerAttack(n: int, e: int) -> int:
             x1 = (-b - root) // 2
             x2 = (-b + root) // 2
             if x1 * x2 == n: return d
+
+
+def hastadAttack(ciphertexts: list, modules: list, e: int) -> int:
+    """Hastad attack on RSA with small public key via Chinese remainder theorem.
+    This attack works effectively for extremely small public keys (3, 7, 11) and
+    takes exponentially more time with larger keys.
+
+    Parameters:
+        ciphertexts: list
+            list of encrypted messages
+        
+        modules: list
+            list of RSA modules
+        
+        e: int
+            public key used for encryption
+    
+    Returns:
+        message: int
+            Decrypted message, or None if ciphertexts length is not equal to modules length 
+            or e is larger than ciphertexts length
+    """
+
+    if len(ciphertexts) != len(modules): return None
+    if e > len(ciphertexts): return None
+
+    message = base.crt(ciphertexts[:e], modules[:e])
+    return base.iroot(e, message)
+
