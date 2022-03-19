@@ -3,3 +3,4 @@ dist
 MANIFEST
 ptCrypt.egg-info
 ptVenv
+*.pyc
