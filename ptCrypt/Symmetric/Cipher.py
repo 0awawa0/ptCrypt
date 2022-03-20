@@ -2,6 +2,8 @@ from abc import *
 
 
 class Cipher(ABC):
+    class UnsupportedKeyLengthException(Exception):
+        pass
 
     @abstractproperty
     def key(self):
