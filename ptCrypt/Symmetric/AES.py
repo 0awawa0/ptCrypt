@@ -59,7 +59,7 @@ class AES(BlockCipher):
             raise Cipher.UnsupportedKeyLengthException("Passed key with wrong length. AES standard only supports keys of sizes 4, 6 or 8 bytes")
 
         self._key = key
-        self._roundKeys = AES.generateRoundKeys(self._key)
+        self._roundKeys = AES.keyExpansion(self._key)
     
     def encrypt(self, data: bytes):
 
@@ -82,18 +82,20 @@ class AES(BlockCipher):
     def decrypt(self, data: bytes):
         return data
     
-    def addRoundKey(data, key):
-        pass
+    def addRoundKey(state: list, key: bytes):
+        for i in range(len(state)):
+            for j in range(len(state[i])):
+                state[i][j] = state[i][j] ^ key[len(state) * i + j]
 
     def subBytes(state):
         for i in range(len(state)):
             for j in range(len(state[i])):
-                state[i][j] = AES.SBox(state[i][j])
+                state[i][j] = AES.SBox[state[i][j]]
     
     def invSubBytes(state):
         for i in range(len(state)):
             for j in range(len(state[i])):
-                state[i][j] = AES.InvSBox(state[i][j])
+                state[i][j] = AES.InvSBox[state[i][j]]
 
     def shiftRows(state):
         t = state[1][0]
@@ -119,7 +121,7 @@ class AES(BlockCipher):
         state[1][0] = t
 
         state[2][0], state[2][2] = state[2][2], state[2][0]
-        state[2][1], state[2][3] = state[2][1], state[2][3]
+        state[2][1], state[2][3] = state[2][3], state[2][1]
 
         t = state[3][0]
         state[3][0] = state[3][1]
@@ -128,9 +130,28 @@ class AES(BlockCipher):
         state[3][3] = t
 
     def mixColumns(state):
-        pass
+        for i in range(4):
+            s0c = state[0][i]
+            s1c = state[1][i]
+            s2c = state[2][i]
+            s3c = state[3][i]
+            state[0][i] = AES.gmul(0x02, s0c) ^ AES.gmul(0x03, s1c) ^ s2c ^ s3c
+            state[1][i] = s0c ^ AES.gmul(0x02, s1c) ^ AES.gmul(0x03, s2c) ^ s3c
+            state[2][i] = s0c ^ s1c ^ AES.gmul(0x02, s2c) ^ AES.gmul(0x03, s3c)
+            state[3][i] = AES.gmul(0x03, s0c) ^ s1c ^ s2c ^ AES.gmul(0x02, s3c)
+    
+    def invMixColumns(state):
+        for i in range(4):
+            s0c = state[0][i]
+            s1c = state[1][i]
+            s2c = state[2][i]
+            s3c = state[3][i]
+            state[0][i] = AES.gmul(0x0e, s0c) ^ AES.gmul(0x0b, s1c) ^ AES.gmul(0x0d, s2c) ^ AES.gmul(0x09, s3c)
+            state[1][i] = AES.gmul(0x09, s0c) ^ AES.gmul(0x0e, s1c) ^ AES.gmul(0x0b, s2c) ^ AES.gmul(0x0d, s3c)
+            state[2][i] = AES.gmul(0x0d, s0c) ^ AES.gmul(0x09, s1c) ^ AES.gmul(0x0e, s2c) ^ AES.gmul(0x0b, s3c)
+            state[3][i] = AES.gmul(0x0b, s0c) ^ AES.gmul(0x0d, s1c) ^ AES.gmul(0x09, s2c) ^ AES.gmul(0x0e, s3c)
 
-    def generateRoundKeys(key: bytes) -> list:
+    def keyExpansion(key: bytes) -> list:
         pass
 
     def bytesToState(data: bytes) -> list:
@@ -143,3 +164,14 @@ class AES(BlockCipher):
             for j in range(4):
                 state[i].append(data[4 * i + j])
         return state
+    
+
+    def gmul(a: int, b: int) -> int:
+        res = 0
+        for i in range(8):
+            if b & 1 == 1: res ^= a
+            highBitSet = (a & 0x80) != 0
+            a = (a << 1) & 0xff
+            if highBitSet: a = a ^ 0x1b
+            b >>= 1
+        return res
