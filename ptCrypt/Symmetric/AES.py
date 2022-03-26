@@ -1,8 +1,19 @@
 from ptCrypt.Symmetric.BlockCipher import BlockCipher
 from ptCrypt.Symmetric.Cipher import Cipher
+from ptCrypt.Math.base import xor
 
 
 class AES(BlockCipher):
+    """AES cipher implementation according to FIPS-197.
+
+    AES is a block cipher with block size of 16 bytes. There are three variants of AES with different key lengths and count of rounds:
+        * AES-128 - 128-bit (16 bytes) key with 10 rounds
+        * AES-192 - 192-bit (24 bytes) key with 12 rounds
+        * AES-256 - 256-bit (32 bytes) key with 14 rounds
+
+    This implementation will use appropriate variant according to the size of key passed to the constructor.
+    Note that only encrypt() and decyprt() functions are instance-dependent, all other functions are static, and may be used without instantiating the object.
+    """
 
     SBox = [
         0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76, 
@@ -49,19 +60,39 @@ class AES(BlockCipher):
         return self._key
     
     def __init__(self, key: bytes):
-        if len(key) == 4:
-            self._rounds = 10
-        elif len(key) == 6:
-            self._rounds = 12
-        elif len(key) == 8:
-            self._rounds = 14
+        """Creates instance of AES cipher with given key.
+        Will throw UnsupportedKeyLengthException if passed key is not 16, 24 or 32 bytes long.
+
+        Parameters:
+            key: bytes
+                Secret key that will be used for encryption and decryption. Must have length of 16, 24 or 32 bytes.
+        
+        """
+        if len(key) == 16: self._rounds = 10
+        elif len(key) == 24: self._rounds = 12
+        elif len(key) == 32: self._rounds = 14
         else:
             raise Cipher.UnsupportedKeyLengthException("Passed key with wrong length. AES standard only supports keys of sizes 4, 6 or 8 bytes")
 
         self._key = key
         self._roundKeys = AES.keyExpansion(self._key)
     
-    def encrypt(self, data: bytes):
+    def encrypt(self, data: bytes) -> bytes:
+        """Encrypts one block of data. 
+        Encryption operation is specified by FIPS-197, section 5.1
+        Will throw WrongBlockSizeException if given data size is not equal to 16 bytes
+
+        Parameters:
+            data: bytes
+                Data to be encrypted. Must be exactly 16 bytes long
+        
+        Returns:
+            ciphertext: bytes
+                Encrypted data
+        """
+
+        if len(data) != AES.blockSize: 
+            raise BlockCipher.WrongBlockSizeException(f"Required data of size {AES.blockSize} bytes but {len(data)} bytes given")
 
         state = AES.bytesToState(data)
 
@@ -72,32 +103,92 @@ class AES(BlockCipher):
             AES.shiftRows(state)
             AES.mixColumns(state)
             AES.addRoundKey(state, self._roundKeys[i])
-        
+            
         AES.subBytes(state)
         AES.shiftRows(state)
         AES.addRoundKey(state, self._roundKeys[-1])
 
-        return state
+        return AES.stateToBytes(state)
 
     def decrypt(self, data: bytes):
-        return data
+        """Decrypts one block of data. 
+        Decryption operation is specified by FIPS-197, section 5.3
+        Will throw WrongBlockSizeException if given data size is not equal to 16 bytes
+
+        Parameters:
+            data: bytes
+                Encrypted data to be decrypted. Must be exactly 16 bytes long
+        
+        Returns:
+            ciphertext: bytes
+                Decrypted data
+        """
+
+        if len(data) != AES.blockSize:
+            raise BlockCipher.WrongBlockSizeException(f"Required data of size {AES.blockSize} bytes but {len(data)} bytes given")
+        state = AES.bytesToState(data)
+
+        AES.addRoundKey(state, self._roundKeys[-1])
+
+        for i in range(self._rounds - 1, 0, -1):
+            AES.invShiftRows(state)
+            AES.invSubBytes(state)
+            AES.addRoundKey(state, self._roundKeys[i])
+            AES.invMixColumns(state)
+        
+        AES.invShiftRows(state)
+        AES.invSubBytes(state)
+        AES.addRoundKey(state, self._roundKeys[0])
+
+        return AES.stateToBytes(state)
     
     def addRoundKey(state: list, key: bytes):
-        for i in range(len(state)):
-            for j in range(len(state[i])):
-                state[i][j] = state[i][j] ^ key[len(state) * i + j]
+        """AES AddRoundKey operation on cipher state specified by FIPS-197, section 5.1.4
+        Operation is performed in-place, i.e. passed state list will be changed without allocating new array
+        
+        Parameters:
+            state: list
+                AES cipher state - 4 x 4 matrix of bytes
+                
+            key: bytes
+                16 bytes of AES round key
+        """
+        for r in range(len(state)):
+            for c in range(len(state[r])):
+                state[r][c] = state[r][c] ^ key[r + len(state) * c]
 
     def subBytes(state):
+        """AES SubBytes operation on cipher state specified by FIPS-197, section 5.1.1
+        Operation is performed in-place, i.e. passed state list will be changed without allocating new array
+
+        Parameters:
+            state: list
+                AES cipher state - 4 x 4 matrix of bytes
+        """
         for i in range(len(state)):
             for j in range(len(state[i])):
                 state[i][j] = AES.SBox[state[i][j]]
     
     def invSubBytes(state):
+        """AES InvSubBytes operation on cipher state specified by FIPS-197, section 5.3.2
+        Operation is performed in-place, i.e. passed state list will be changed without allocating new array
+
+        Parameters:
+            state: list
+                AES cipher state - 4 x 4 matrix of bytes
+        """
         for i in range(len(state)):
             for j in range(len(state[i])):
                 state[i][j] = AES.InvSBox[state[i][j]]
 
     def shiftRows(state):
+        """AES ShiftRows operation on cipher state specified by FIPS-197, section 5.1.2
+        Operation is performed in-place, i.e. passed state list will be changed without allocating new array
+
+        Parameters:
+            state: list
+                AES cipher state - 4 x 4 matrix of bytes
+        """
         t = state[1][0]
         state[1][0] = state[1][1]
         state[1][1] = state[1][2]
@@ -114,6 +205,14 @@ class AES(BlockCipher):
         state[3][0] = t
     
     def invShiftRows(state):
+        """AES InvShiftRows operation on cipher state specified by FIPS-197, section 5.3.1
+        Operation is performed in-place, i.e. passed state list will be changed without allocating new array
+
+        Parameters:
+            state: list
+                AES cipher state - 4 x 4 matrix of bytes
+        """
+
         t = state[1][3]
         state[1][3] = state[1][2]
         state[1][2] = state[1][1]
@@ -130,6 +229,13 @@ class AES(BlockCipher):
         state[3][3] = t
 
     def mixColumns(state):
+        """AES MixColumns operation on cipher state specified by FIPS-197, section 5.1.3
+        Operation is performed in-place, i.e. passed state list will be changed without allocating new array
+
+        Parameters:
+            state: list
+                AES cipher state - 4 x 4 matrix of bytes
+        """
         for i in range(4):
             s0c = state[0][i]
             s1c = state[1][i]
@@ -141,6 +247,13 @@ class AES(BlockCipher):
             state[3][i] = AES.gmul(0x03, s0c) ^ s1c ^ s2c ^ AES.gmul(0x02, s3c)
     
     def invMixColumns(state):
+        """AES InvMixColumns operation on cipher state specified by FIPS-197, section 5.3.3
+        Operation is performed in-place, i.e. passed state list will be changed without allocating new array
+
+        Parameters:
+            state: list
+                AES cipher state - 4 x 4 matrix of bytes
+        """
         for i in range(4):
             s0c = state[0][i]
             s1c = state[1][i]
@@ -152,23 +265,123 @@ class AES(BlockCipher):
             state[3][i] = AES.gmul(0x0b, s0c) ^ AES.gmul(0x0d, s1c) ^ AES.gmul(0x09, s2c) ^ AES.gmul(0x0e, s3c)
 
     def keyExpansion(key: bytes) -> list:
-        pass
+        """AES key schedule. Creates round keys for AES encryption and decryption from main key. Will return None if passed key size is not equal to 16, 24 or 32 bytes.
+        Algorithm is specified by FIPS-197, section 5.2, although you might want to check this https://en.wikipedia.org/wiki/AES_key_schedule for better example.
+
+        Parameters:
+            key: bytes
+                AES secret key. Must be 16, 24 or 32 bytes long, otherwise None will be returned.
+        
+        Returns:
+            roundKeys: list
+                List of round keys, size of the list depends on size of the key:
+                    
+                    * 11 keys for 16 bytes key
+                    * 13 keys for 24 bytes key
+                    * 15 keys for 32 bytes key
+                    * None for all other key sizes
+        """
+        Rcon = [
+            b"\x00\x00\x00\x00",
+            b"\x01\x00\x00\x00",
+            b"\x02\x00\x00\x00", 
+            b"\x04\x00\x00\x00", 
+            b"\x08\x00\x00\x00", 
+            b"\x10\x00\x00\x00", 
+            b"\x20\x00\x00\x00", 
+            b"\x40\x00\x00\x00", 
+            b"\x80\x00\x00\x00", 
+            b"\x1b\x00\x00\x00", 
+            b"\x36\x00\x00\x00"
+        ]
+        n = len(key) // 4
+        if n == 4:
+            r = 11
+        elif n == 6:
+            r = 13
+        elif n == 8:
+            r = 15
+        else:
+            return None
+        
+        keyWords = [key[4 * i: 4 * i + 4] for i in range(n)]
+        
+        resultWords = []
+        for i in range(4 * r):
+            if i < n: resultWords.append(keyWords[i])
+            elif i >= n and i % n == 0:
+                Wi1 = [AES.SBox[byte] for byte in resultWords[i - 1]]
+                Wi1 = Wi1[1:] + Wi1[:1]
+                Wi1 = b"".join(bytes([byte]) for byte in Wi1)
+                Win = resultWords[i - n]
+                resultWords.append(xor(xor(Win, Wi1), Rcon[i // n]))
+            elif i >= n and n > 6 and i % n == 4:
+                Win = resultWords[i - n]
+                Wi1 = b"".join([bytes([AES.SBox[byte]]) for byte in resultWords[i - 1]])
+                resultWords.append(xor(Win, Wi1))
+            else:
+                resultWords.append(xor(resultWords[i - n], resultWords[i - 1]))
+        
+        roundKeys = []
+        for i in range(r):
+            roundKeys.append(resultWords[4 * i] + resultWords[4 * i + 1] + resultWords[4 * i + 2] + resultWords[4 * i + 3])
+
+        return roundKeys
 
     def bytesToState(data: bytes) -> list:
-        if len(data) != 16:
-            raise BlockCipher.WrongBlockSizeException(f"Data size is incorrect. Required 16 bytes, but received {len(data)}.")
+        """Helper function for converting bytes to AES state matrix.
+        Will throw an exception if data size is not equal to 16 bytes.
 
-        state = []
-        for i in range(4):
-            state.append([])
-            for j in range(4):
-                state[i].append(data[4 * i + j])
+        Parameters:
+            data: bytes
+                Data to convert
+            
+        Returns:
+            state: list
+                4 x 4 matrix of bytes
+        """
+        if len(data) != AES.blockSize:
+            raise BlockCipher.WrongBlockSizeException(f"Data size is incorrect. Required {AES.blockSize} bytes, but received {len(data)}.")
+
+        state = [[0, 0, 0, 0] for _ in range(4)]
+        for r in range(4):
+            for c in range(4):
+                state[r][c] = data[r + 4 * c]
         return state
-    
+
+    def stateToBytes(state: list) -> bytes:
+        """Helper function for converting AES state matrix to bytes
+
+        Parameters:
+            state: list
+                4 x 4 AES state matrix (any matrix will be processed actually)
+            
+        Returns:
+            data: bytes
+                state matrix converted to bytes
+        """
+
+        result = b""
+        for r in range(len(state)):
+            for c in range(len(state[r])):
+                result += bytes([state[c][r]])
+        return result
 
     def gmul(a: int, b: int) -> int:
+        """Helper function for performing AES GF(2^8) multiplication.
+        Algorithm is taken from https://en.wikipedia.org/wiki/Rijndael_MixColumns
+
+        Parameters:
+            a, b: int
+                Integer representation of polynomials in GF(2^8)
+        
+        Returns:
+            result: int
+                Integer representation of multiplied a and b in GF(2^8)
+        """
+
         res = 0
-        for i in range(8):
+        for _ in range(8):
             if b & 1 == 1: res ^= a
             highBitSet = (a & 0x80) != 0
             a = (a << 1) & 0xff
