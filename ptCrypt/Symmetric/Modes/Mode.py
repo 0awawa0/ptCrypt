@@ -24,7 +24,7 @@ class Mode(Cipher):
     
     def splitBlocks(self, data: bytes) -> list:
         if len(data) % self.cipher.blockSize:
-            message = f"Data size ({len(data)}) is not multiple of cipher block size {cipher.blockSize}. Ensure that you are using correct padding or pass the data of the appropriate length."
+            message = f"Data size ({len(data)}) is not multiple of cipher block size {self.cipher.blockSize}. Ensure that you are using correct padding or pass the data of the appropriate length."
             raise Mode.UnpaddedDataException(message)
         
         return [
