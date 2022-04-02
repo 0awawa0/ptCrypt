@@ -1,7 +1,6 @@
 import random
 import hashlib
 import secrets
-from sqlite3 import SQLITE_ALTER_TABLE
 from ptCrypt.Math import base, primality
 from ptCrypt.Util.keys import IFC_APPROVED_LENGTHS, getIFCSecurityLevel, millerRabinTestsForIFC, getIFCAuxiliaryPrimesLegths
 from secrets import randbits
