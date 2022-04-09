@@ -63,12 +63,12 @@ def testIntToBytes():
 def testCrt():
     print("testCrt")
 
-    numbersCount = 4
-    numbersSize = 1024
+    numbersCount = 3
+    numbersSize = 128
     print(f"\tUsing {numbersCount} numbers of size {numbersSize * 8} bits (modulus size {numbersCount * numbersSize * 8} bits)")
 
     times = []
-    for _ in range(100):
+    for _ in range(5):
         modulus = base.bytesToInt(base.getRandomBytes(numbersSize))
         mods = [modulus]
         for _ in range(1, numbersCount):
@@ -97,7 +97,7 @@ def testCrt():
 def testGetGenerator():
     print("testGetGenerator")
 
-    for _ in range(100):
+    for _ in range(5):
         p, q = primality.getFfcPrimes(32, 512)
         g = base.getGenerator(p, q)
         assert pow(g, q, p) == 1
@@ -106,7 +106,7 @@ def testGetGenerator():
 def testGetPrimitiveRoot():
     print("testGetPrimitiveRoot")
     
-    for _ in range(100):
+    for _ in range(5):
         p, q = primality.getFfcPrimes(64, 128)
         N = (p - 1) // q
         factors = primality.primeFactors(N)

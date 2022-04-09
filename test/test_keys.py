@@ -3,7 +3,7 @@ from ptCrypt.Util.keys import ECC_APPROVED_LENGTHS, FFC_APPROVED_LENGTHS, IFC_AP
 
 def testGetFFCSecurityLevel():
 
-    assert getFFCSecurityLevel(123, 123) == 0
+    assert getFFCSecurityLevel(123, 123) == 40
 
     N, L = FFC_APPROVED_LENGTHS[0]
     assert getFFCSecurityLevel(N, L) == 80
@@ -23,7 +23,7 @@ def testGetFFCSecurityLevel():
 
 def testGetIFCSecurityLevel():
 
-    assert getIFCSecurityLevel(123) == 0
+    assert getIFCSecurityLevel(123) == 40
 
     N = IFC_APPROVED_LENGTHS[0]
     assert getIFCSecurityLevel(N) == 80
@@ -43,7 +43,7 @@ def testGetIFCSecurityLevel():
 
 def testGetECCSecurityLevel():
 
-    assert getECCSecurityLevel(100) == 0
+    assert getECCSecurityLevel(100) == 40
 
     N = ECC_APPROVED_LENGTHS[0]
     assert getECCSecurityLevel(N) == 80

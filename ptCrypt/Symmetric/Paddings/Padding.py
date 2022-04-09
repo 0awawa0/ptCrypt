@@ -3,9 +3,13 @@ from abc import *
 
 class Padding(ABC):
 
+    @property
+    def blockSize(self) -> int:
+        return self._blockSize
+
     @abstractmethod
-    def __init__(self):
-        pass
+    def __init__(self, blockSize: int):
+        self._blockSize = blockSize
     
     @abstractmethod
     def pad(self, data: bytes) -> bytes:

@@ -288,7 +288,7 @@ def testGetParameters():
     print("testGetParameters")
 
     for _ in range(10):
-        e, d, n, p, q = RSA.getParameters(256, forceWeak=True)
+        e, d, n, p, q = RSA.getParameters(256)
         message = base.bytesToInt(base.getRandomBytes(base.byteLength(n) - 1))
         
         encrypted = RSA.encrypt(e, n, message)
