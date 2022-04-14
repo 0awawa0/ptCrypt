@@ -1,7 +1,6 @@
-from distutils.log import info
 from ptCrypt.Math import base, primality, smallPrimes
 from ptCrypt.Asymmetric.RSA import getSeed
-from datetime import date, datetime, time
+from datetime import date, datetime
 import random
 
 from ptCrypt.Util.keys import IFC_APPROVED_LENGTHS

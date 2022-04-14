@@ -297,7 +297,7 @@ def testGetParameters():
         assert message == decrypted
 
     for _ in range(10):
-        e, d, n, p, q = RSA.getParameters(512, forceWeak=True)
+        e, d, n, p, q = RSA.getParameters(512)
         message = base.bytesToInt(base.getRandomBytes(base.byteLength(n) - 1))
         
         encrypted = RSA.encrypt(e, n, message)
@@ -365,7 +365,10 @@ def testHastadAttack():
         ciphertexts = []
 
         for _ in range(e):
-            p, q = RSA.generateProbablePrimes(e, 1024, forceWeak=True)
+            res = RSA.generateProbablePrimes(e, 1024, forceWeak=True)
+            while res == None:
+                res = RSA.generateProbablePrimes(e, 1024, forceWeak=True)
+            p, q = res
             n = p * q
             modules.append(n)
             ciphertexts.append(pow(message, e, n))
