@@ -7,6 +7,8 @@ Library contains implementations of popular cryptographic algorithms and also so
 
 However, because of it uses only Python code and it doesn't have any dependencies except standard Python library this package doesn't have any installation issues as other libraries have (PyCrypto, for example might have some troubles during installation and configuration). Also, this library contains cryptanalytic attacks implementations, that might be useful for hackers' competitions, like CTFs.
 
+## [Project structure](./ptCrypt/README.md)
+
 ## Attacks included in library
 
 ### RSA

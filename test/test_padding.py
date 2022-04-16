@@ -1,6 +1,6 @@
 from ptCrypt.Math.base import pad
 from ptCrypt.Symmetric.Paddings.ZeroPadding import ZeroPadding
-from ptCrypt.Symmetric.Paddings.PKCS7Padding import PKCS7Padding
+from ptCrypt.Symmetric.Paddings.PKCS5Padding import PKCS5Padding
 
 
 def testZeroPadding():
