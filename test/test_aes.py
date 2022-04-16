@@ -1,6 +1,6 @@
-from pydoc import plain
-from unittest import result
 from ptCrypt.Symmetric.AES import AES
+from ptCrypt.Symmetric.Paddings.PKCS5Padding import PKCS5Padding
+from ptCrypt.Symmetric.Modes.CBC import CBC
 
 
 def testStateToBytes():
@@ -178,3 +178,19 @@ def testEncryptDecrypt():
 
     assert cipher.encrypt(plaintext) == check
     assert cipher.decrypt(check) == plaintext
+
+
+def testAES_CBC_PKCS5Padding():
+    key = bytes.fromhex("000102030405060708090a0b0c0d0e0f")
+    iv = bytes.fromhex("000102030405060708090a0b0c0d0e0f")
+    data = bytes.fromhex("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff")
+    check = bytes.fromhex("76d0627da1d290436e21a4af7fca94b732a06af3e0df74a359a0d1f48889e61526e58cb3edca4ac1c4ab097eecba37fc218a215531f759c96194d09e29163c79")
+
+    padding = PKCS5Padding(AES.blockSize)
+    cipher = CBC(AES(key), iv, padding)
+
+    encrypted = cipher.encrypt(data)
+    decrypted = cipher.decrypt(encrypted)
+
+    assert encrypted == check
+    assert decrypted == data

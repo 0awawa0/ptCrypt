@@ -1,7 +1,5 @@
-from lib2to3.pgen2 import pgen
 from ptCrypt.Math import base, primality
 import hashlib
-from datetime import date, datetime
 import secrets
 from ptCrypt.Util.keys import FFC_APPROVED_LENGTHS
 

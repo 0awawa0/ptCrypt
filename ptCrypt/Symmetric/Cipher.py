@@ -6,7 +6,7 @@ class Cipher(ABC):
         pass
 
     @abstractproperty
-    def key(self):
+    def key(self) -> bytes:
         pass
 
     @abstractmethod
@@ -14,9 +14,9 @@ class Cipher(ABC):
         pass
     
     @abstractmethod
-    def encrypt(self, data: bytes):
+    def encrypt(self, data: bytes) -> bytes:
         pass
 
     @abstractmethod
-    def decrypt(self, data: bytes):
+    def decrypt(self, data: bytes) -> bytes:
         pass

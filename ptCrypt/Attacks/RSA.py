@@ -1,7 +1,6 @@
 import random
 import time
 from ptCrypt.Math import base
-from typing import Tuple, Iterator, Iterable, Optional
 
 
 def privateKeyFactorization(n: int, e: int, d: int, timeout: int = None) -> tuple:

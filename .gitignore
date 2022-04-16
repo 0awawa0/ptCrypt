@@ -4,3 +4,4 @@ MANIFEST
 ptCrypt.egg-info
 ptVenv
 *.pyc
+.coverage
