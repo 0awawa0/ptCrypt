@@ -5,3 +5,4 @@ ptCrypt.egg-info
 ptVenv
 *.pyc
 .coverage
+build/
