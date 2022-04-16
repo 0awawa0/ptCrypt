@@ -3,6 +3,9 @@ from abc import *
 
 class Padding(ABC):
 
+    class InappropriateBlockSizeException(Exception):
+        pass
+
     @property
     def blockSize(self) -> int:
         return self._blockSize
