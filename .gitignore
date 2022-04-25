@@ -6,3 +6,4 @@ ptVenv
 *.pyc
 .coverage
 build/
+env

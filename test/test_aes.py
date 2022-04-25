@@ -1,6 +1,7 @@
 from ptCrypt.Symmetric.AES import AES
 from ptCrypt.Symmetric.Paddings.PKCS5Padding import PKCS5Padding
 from ptCrypt.Symmetric.Modes.CBC import CBC
+from ptCrypt.Math import base
 
 
 def testStateToBytes():
@@ -194,3 +195,14 @@ def testAES_CBC_PKCS5Padding():
 
     assert encrypted == check
     assert decrypted == data
+
+def testMeasureEncrypt():
+    from time import time
+    key = base.getRandomBytes(32)
+    data = base.getRandomBytes(16)
+    aes = AES(key)
+    start = time()
+    for i in range(1000):
+        aes.encrypt(data)
+    end = time()
+    print(end - start)
