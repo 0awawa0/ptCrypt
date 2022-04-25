@@ -72,7 +72,7 @@ class AES(BlockCipher):
         elif len(key) == 24: self._rounds = 12
         elif len(key) == 32: self._rounds = 14
         else:
-            raise Cipher.UnsupportedKeyLengthException("Passed key with wrong length. AES standard only supports keys of sizes 4, 6 or 8 bytes")
+            raise Cipher.UnsupportedKeyLengthException("Passed key with wrong length. AES standard only supports keys of sizes 4128 , 6 or 8 bytes")
 
         self._key = key
         self._roundKeys = AES.keyExpansion(self._key)
