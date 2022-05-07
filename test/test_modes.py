@@ -1,6 +1,7 @@
 from ptCrypt.Symmetric.AES import AES
 from ptCrypt.Symmetric.Modes.ECB import ECB
 from ptCrypt.Symmetric.Modes.CBC import CBC
+from ptCrypt.Symmetric.Modes.PCBC import PCBC
 from ptCrypt.Math import base
 
 
@@ -31,3 +32,16 @@ def testCBC():
     print(encrypted.hex())
     assert encrypted.hex() == check.hex()
     assert decrypted.hex() == data.hex()
+
+def testPCBC():
+    key = bytes.fromhex("000102030405060708090a0b0c0d0e0f")
+    iv = bytes.fromhex("000102030405060708090a0b0c0d0e0f")
+    data = bytes.fromhex("00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff")
+    check = bytes.fromhex("76d0627da1d290436e21a4af7fca94b732a06af3e0df74a359a0d1f48889e61526e58cb3edca4ac1c4ab097eecba37fc")
+
+    cipher = PCBC(AES(key), iv)
+    encrypted = cipher.encrypt(data)
+    decrypted = cipher.decrypt(encrypted)
+
+    print(encrypted.hex())
+    assert data == decrypted
