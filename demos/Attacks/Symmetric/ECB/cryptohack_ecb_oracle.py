@@ -11,11 +11,11 @@ def query(payload: bytes):
         try:
             request = baseAddress + payload.hex()
             response = requests.get(request)
-
+            
             ciphertext = json.loads(response.content)["ciphertext"]
             return bytes.fromhex(ciphertext)
         except:
             sleep(10)
     
 
-print("Found flag: " + EcbEncryptionOracleAppendAttack(blockSize = 16, query = query).run())
+print("Found flag: " + EcbEncryptionOracleAppendAttack(blockSize = 16, query = query, searchStart = 32, searchEnd = 127).run().decode())
