@@ -1,5 +1,3 @@
-
-
 """Encryption oracle attack on the ECB encryption mode. 
 Applicable when you have an oracle that allows you to encrypt arbitrary text and appends secret information to your message.
 Let's call secret part 'x', then this attack would be applicable if you can send value 'y' and oracle actually encrypts value 'yx' and sends
@@ -59,19 +57,19 @@ class EcbEncryptionOracleAppendAttack:
         self.totalLength = self.__determineTotalLength()
         self.blocksCount = self.totalLength // self.blockSize
 
-        self.listener.attackStarted()
+        if self.listener: self.listener.attackStarted()
 
         while len(self.knownPlaintext) < self.totalLength:
             foundByte = self.__searchByte()
 
             if foundByte:
                 self.knownPlaintext += bytes([foundByte])
-                self.listener.foundValue(len(self.knownPlaintext), foundByte, self.totalLength)
+                if self.listener: self.listener.foundValue(len(self.knownPlaintext), foundByte, self.totalLength)
             else:
-                self.listener.failedToFind(len(self.knownPlaintext))
+                if self.listener: self.listener.failedToFind(len(self.knownPlaintext))
                 return self.knownPlaintext
         
-        self.listener.attackFinished(self.knownPlaintext)
+        if self.listener: self.listener.attackFinished(self.knownPlaintext)
 
         return self.knownPlaintext
 

@@ -5,26 +5,8 @@ from time import sleep
 
 baseAddress = "https://aes.cryptohack.org/ecb_oracle/encrypt/"
 
-class AttackListener(EcbEncryptionOracleAppendAttack.Listener):
-
-    def __init__(self):
-        self.knownPlaintext = ""
-
-    def attackStarted(self):
-        print("Started searching plaintext")
-
-    def foundValue(self, position, value, targetLength):
-        self.knownPlaintext += chr(value)
-        print(self.knownPlaintext)
-
-    def attackFinished(self, foundText):
-        print("Finished the attack. Found plaintext: " + foundText.decode())
-
-    def failedToFind(self, position):
-        print("Did not find byte at position " + str(position))
-
-
 def query(payload: bytes):
+    # The server may refuse connection due to too many calls, in that case, we wait a few seconds and try sending again
     while True:
         try:
             request = baseAddress + payload.hex()
@@ -36,13 +18,4 @@ def query(payload: bytes):
             sleep(10)
     
 
-attack = EcbEncryptionOracleAppendAttack(
-    blockSize = 16, 
-    query = query, 
-    listener = AttackListener(), 
-    searchStart = 32, 
-    searchEnd = 127,
-    knownText=b""
-)
-
-attack.run()
+print("Found flag: " + EcbEncryptionOracleAppendAttack(blockSize = 16, query = query).run())
