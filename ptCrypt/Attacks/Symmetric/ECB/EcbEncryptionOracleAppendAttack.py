@@ -15,10 +15,9 @@ Optional parameters are:
 
 1) listener - implementation of the Listener interface. You should pass that if you want to listen to attack updates, such as when attack starts and finishes, 
     when next byte is found or when a failure occurs
-2) searchStart - value from which to start searching byte. By default it is 0, but if you have additional knowledge about the secret, you can set differnet value
-    to optimize the search. For example, if you known that the secret consists of printable ASCII characters, then you should set searchStart to 32.
-3) searchEnd - same as searchStart but from the other side. If the secret consists of printable ASCII characters, then you can set 127
-4) knownPlaintext - known part of the secret. Note that this must be first N bytes of the secret, not any arbitrary part
+2) searchRange - a range of bytes you expect to find plaintext values. For example, you might expect plaintext values to be printable ASCII characters, 
+so you set the searchRange accordingly. Attack will not try values outside of this range.
+3) knownPlaintext - known part of the secret. Note that this must be first N bytes of the secret, not any arbitrary part
 """
 class EcbEncryptionOracleAppendAttack:
 
@@ -40,16 +39,14 @@ class EcbEncryptionOracleAppendAttack:
         blockSize: int, 
         query: callable, 
         listener: Listener = None, 
-        searchStart: int = 0, 
-        searchEnd: int = 256,
+        searchRange: range = range(0, 256),
         knownText: bytes = b""
     ):
         self.blockSize = blockSize
         self.query = query
         self.knownPlaintext = knownText
         self.listener = listener 
-        self.searchStart = searchStart
-        self.searchEnd = searchEnd
+        self.searchRange = searchRange
 
 
     def run(self):
@@ -77,7 +74,7 @@ class EcbEncryptionOracleAppendAttack:
     def __searchByte(self):
         target = self.__sliceInterestingBlock(self.query(b"\00" * self.__getZerosCount()))
 
-        for candidate in range(self.searchStart, self.searchEnd):
+        for candidate in self.searchRange:
             payload = self.__preparePayloadWithCandidate(candidate)
             ciphertext = self.__sliceInterestingBlock(self.query(payload))
 

@@ -18,4 +18,4 @@ def query(payload: bytes):
             sleep(10)
     
 
-print("Found flag: " + EcbEncryptionOracleAppendAttack(blockSize = 16, query = query, searchStart = 32, searchEnd = 127).run().decode())
+print("Found flag: " + EcbEncryptionOracleAppendAttack(blockSize = 16, query = query, searchRange=range(32, 128)).run().decode())
