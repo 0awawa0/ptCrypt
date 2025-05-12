@@ -5,7 +5,8 @@ class Cipher(ABC):
     class UnsupportedKeyLengthException(Exception):
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def key(self) -> bytes:
         pass
 

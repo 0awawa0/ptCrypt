@@ -9,7 +9,7 @@ However, because of it uses only Python code and it doesn't have any dependencie
 
 ## [Project structure](./ptCrypt/README.md)
 
-## Attacks included in library
+## Attacks included in the library
 
 ### RSA
 1. Private key factorization: finds divisor of RSA modulus (`N`), using private and public exponents (`d` and `e`).
@@ -21,3 +21,21 @@ However, because of it uses only Python code and it doesn't have any dependencie
 1. Repeated secret nonce attack: finds private key from two different signatures that used same parameters, including secret nonce.
 
 More attacks are to be added in future.
+
+### CBC encryption mode
+1. [PKCS 7 padding oracle attack](./ptCrypt/Attacks/Symmetric/CBC/CbcPkcs7PaddingOracleAttack.py)
+ 
+    Attack on a block cipher working in CBC encryption mode with PKCS7 padding. Applicable when you have an encrypted message, which you can change and check padding on that message.
+
+### ECB encryption mode
+1. [Encryption oracle attack](./ptCrypt/Attacks/Symmetric/ECB/EcbEncryptionOracleAppendAttack.py)
+    
+    Attack on a block cipher working in ECB encryption mode. Applicable when you have an oracle that allows you to encrypt arbitrary text and appends secret information to your message.
+    Let's call secret part 'x', then this attack would be applicable if you can send value 'y' and oracle actually encrypts value 'yx' and sends
+    encrypted text back to you.
+    Then you can ecnrypt different values of 'y' in such a way that you can infer 'x' byte by byte.
+
+### RC4
+1. [Fluhrer-Mantin-Shamir attack](./ptCrypt/Attacks/Symmetric/RC4/FluhrerMantinShamirAttack.py)
+
+    Attack on RC4 stream cipher with at least 3 byte long IV prepended to the encryption key.
